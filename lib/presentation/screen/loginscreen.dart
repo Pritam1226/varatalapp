@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:varatalapp/core/common/custom_button.dart';
 import 'package:varatalapp/core/common/custom_text_field.dart';
 import 'package:varatalapp/presentation/screen/signupscreen.dart';
@@ -17,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
@@ -40,6 +42,29 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'Password must be at least 6 characters long';
     }
     return null;
+  }
+
+  Future<void> signIn(String email, String password) async {
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Logged in successfully")),
+      );
+
+      // ✅ Navigate after successful login
+      Navigator.pushReplacementNamed(context, '/chatList');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Login failed: ${e.toString()}")),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -108,14 +133,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 30),
                 CustomButton(
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    if (_formKey.currentState?.validate() ?? false) {
-                      // ✅ Navigate to Chat List after login
-                      Navigator.pushReplacementNamed(context, '/chatList');
-                    }
-                  },
-                  text: "Login",
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          FocusScope.of(context).unfocus();
+                          if (_formKey.currentState?.validate() ?? false) {
+                            signIn(
+                              emailController.text.trim(),
+                              passwordController.text.trim(),
+                            );
+                          }
+                        },
+                  text: _isLoading ? "Logging in..." : "Login",
                 ),
                 const SizedBox(height: 20),
                 Center(

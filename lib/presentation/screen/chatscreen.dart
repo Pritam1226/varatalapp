@@ -55,9 +55,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.contactName),
-      ),
+      appBar: AppBar(title: Text(widget.contactName)),
       body: Column(
         children: [
           Expanded(
@@ -69,11 +67,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 final msg = _messages[index];
                 final isMe = msg['sender'] == 'me';
                 return Align(
-                  alignment:
-                      isMe ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: isMe
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(
-                        vertical: 4.0, horizontal: 10.0),
+                      vertical: 4.0,
+                      horizontal: 10.0,
+                    ),
                     padding: const EdgeInsets.all(12.0),
                     decoration: BoxDecoration(
                       color: isMe ? Colors.blue[200] : Colors.grey[300],
@@ -82,14 +83,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          msg['text'],
-                          style: TextStyle(fontSize: 16),
-                        ),
+                        Text(msg['text'], style: TextStyle(fontSize: 16)),
                         SizedBox(height: 4),
                         Text(
                           msg['timestamp'].toString().substring(11, 16),
-                          style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[700],
+                          ),
                         ),
                       ],
                     ),
@@ -106,7 +107,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "typing...",
-                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ),
@@ -136,10 +140,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                IconButton(
-                  onPressed: _sendMessage,
-                  icon: Icon(Icons.send),
-                ),
+                IconButton(onPressed: _sendMessage, icon: Icon(Icons.send)),
               ],
             ),
           ),

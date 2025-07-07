@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:varatalapp/core/common/custom_button.dart';
 import 'package:varatalapp/core/common/custom_text_field.dart';
 import 'package:varatalapp/presentation/screen/loginscreen.dart';
@@ -20,6 +21,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   final _nameFocus = FocusNode();
   final _usernameFocus = FocusNode();
@@ -40,6 +42,34 @@ class _SignupScreenState extends State<SignupScreen> {
     _phoneFocus.dispose();
     _passwordFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> signUp(String email, String password) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Account created successfully")),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Error: ${e.toString()}")),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   String? _validateName(String? value) {
@@ -103,21 +133,18 @@ class _SignupScreenState extends State<SignupScreen> {
                 Text(
                   "Create Account",
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-
                 const SizedBox(height: 10),
-
                 Text(
                   "Please fill in the details to continue",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: Colors.grey),
                 ),
-
                 const SizedBox(height: 30),
-
                 CustomTextField(
                   controller: nameController,
                   focusNode: _nameFocus,
@@ -125,9 +152,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   validator: _validateName,
                   prefixIcon: const Icon(Icons.person_outline_rounded),
                 ),
-
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: usernameController,
                   focusNode: _usernameFocus,
@@ -135,9 +160,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   validator: _validateUserame,
                   prefixIcon: const Icon(Icons.alternate_email_rounded),
                 ),
-
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: emailController,
                   focusNode: _emailFocus,
@@ -145,9 +168,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   validator: _validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
                 ),
-
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: phoneController,
                   focusNode: _phoneFocus,
@@ -155,9 +176,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   validator: _validatePhone,
                   prefixIcon: const Icon(Icons.phone_outlined),
                 ),
-
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: passwordController,
                   focusNode: _passwordFocus,
@@ -178,19 +197,22 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 CustomButton(
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    if (_formKey.currentState?.validate() ?? false) {}
-                  },
-                  text: "Create Account",
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          FocusScope.of(context).unfocus();
+                          if (_formKey.currentState?.validate() ?? false) {
+                            signUp(
+                              emailController.text.trim(),
+                              passwordController.text.trim(),
+                            );
+                          }
+                        },
+                  text: _isLoading ? "Creating..." : "Create Account",
                 ),
-
                 const SizedBox(height: 20),
-
                 Center(
                   child: RichText(
                     text: TextSpan(
@@ -199,11 +221,11 @@ class _SignupScreenState extends State<SignupScreen> {
                       children: [
                         TextSpan(
                           text: "Login",
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Theme.of(context).primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
                               Navigator.push(

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "676300981362",
+    "project_id": "varatalapp-001",
+    "storage_bucket": "varatalapp-001.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676300981362:android:072e27f2507e59185c2eeb",
+        "android_client_info": {
+          "package_name": "com.example.varatalapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwh5J2R4bl1cx20PG6HDztjdjZ-F9T7f8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
