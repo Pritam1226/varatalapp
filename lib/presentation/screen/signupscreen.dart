@@ -1,11 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:varatalapp/controller/signup_controller.dart';
 import 'package:varatalapp/core/common/custom_button.dart';
 import 'package:varatalapp/core/common/custom_text_field.dart';
-import 'package:varatalapp/controller/signup_controller.dart';
 import 'package:varatalapp/presentation/screen/loginscreen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -28,74 +25,44 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  Future<void> signUp(String email, String password) async {
+  Future<void> handleSignup() async {
     setState(() => _isLoading = true);
 
-    try {
-      // 1. Create Firebase Auth user
-      final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
+    final error = await controller.signUpUser();
+    setState(() => _isLoading = false);
 
-      // 2. Get UID
-      final uid = userCredential.user?.uid;
-      if (uid == null) throw Exception("UID is null");
-
-      // 3. Store extra user info in Firestore
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'uid': uid,
-        'name': controller.nameController.text.trim(),
-        'username': controller.usernameController.text.trim(),
-        'email': email,
-        'phone': controller.phoneController.text.trim(),
-        'createdAt': Timestamp.now(),
-      });
-
-      // 4. Navigate
+    if (error == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Account created and saved!")),
+        const SnackBar(
+            content: Text("✅ Signup successful. Please verify your email.")),
       );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+
+      // Optional: show dialog for email verification
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Verify Your Email"),
+          content: const Text(
+              "A verification link has been sent to your email. Please verify it before logging in."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              child: const Text("OK"),
+            )
+          ],
+        ),
       );
-    } catch (e) {
-      print("❌ Error: $e");
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Error: ${e.toString()}")),
+        SnackBar(content: Text("❌ $error")),
       );
-    } finally {
-      setState(() => _isLoading = false);
     }
-  }
-
-  String? _validateName(String? value) {
-    if (value == null || value.isEmpty) return "Please enter your full name";
-    return null;
-  }
-
-  String? _validateUsername(String? value) {
-    if (value == null || value.isEmpty) return "Please enter your username";
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) return "Please enter your email";
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) return "Invalid email address";
-    return null;
-  }
-
-  String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return "Please enter your phone number";
-    final phoneRegex = RegExp(r'^\+?[\d\s-]{10,}$');
-    if (!phoneRegex.hasMatch(value)) return "Invalid phone number";
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return "Please enter a password";
-    if (value.length < 6) return "Password must be at least 6 characters";
-    return null;
   }
 
   @override
@@ -128,7 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: controller.nameController,
                   focusNode: controller.nameFocus,
                   hintText: "Full Name",
-                  validator: _validateName,
+                  validator: controller.validateName,
                   prefixIcon: const Icon(Icons.person_outline_rounded),
                 ),
                 const SizedBox(height: 16),
@@ -136,7 +103,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: controller.usernameController,
                   focusNode: controller.usernameFocus,
                   hintText: "Username",
-                  validator: _validateUsername,
+                  validator: controller.validateUsername,
                   prefixIcon: const Icon(Icons.alternate_email_rounded),
                 ),
                 const SizedBox(height: 16),
@@ -144,7 +111,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: controller.emailController,
                   focusNode: controller.emailFocus,
                   hintText: "Email",
-                  validator: _validateEmail,
+                  validator: controller.validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
                 ),
                 const SizedBox(height: 16),
@@ -152,7 +119,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: controller.phoneController,
                   focusNode: controller.phoneFocus,
                   hintText: "Phone Number",
-                  validator: _validatePhone,
+                  validator: controller.validatePhone,
                   prefixIcon: const Icon(Icons.phone_outlined),
                 ),
                 const SizedBox(height: 16),
@@ -160,7 +127,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: controller.passwordController,
                   focusNode: controller.passwordFocus,
                   hintText: "Password",
-                  validator: _validatePassword,
+                  validator: controller.validatePassword,
                   obscureText: !_isPasswordVisible,
                   prefixIcon: const Icon(Icons.lock_outline_rounded),
                   suffixIcon: IconButton(
@@ -183,10 +150,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       : () {
                           FocusScope.of(context).unfocus();
                           if (_formKey.currentState?.validate() ?? false) {
-                            signUp(
-                              controller.emailController.text.trim(),
-                              controller.passwordController.text.trim(),
-                            );
+                            handleSignup();
                           }
                         },
                   text: _isLoading ? "Creating..." : "Create Account",
