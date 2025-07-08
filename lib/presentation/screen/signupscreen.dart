@@ -32,34 +32,34 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Step 1: Create Auth user
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      // 1. Create Firebase Auth user
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Step 2: Get current user UID
-      User? user = FirebaseAuth.instance.currentUser;
+      // 2. Get UID
+      final uid = userCredential.user?.uid;
+      if (uid == null) throw Exception("UID is null");
 
-      // Step 3: Save additional user data in Firestore
-      await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
-        'uid': user.uid,
+      // 3. Store extra user info in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
         'name': controller.nameController.text.trim(),
         'username': controller.usernameController.text.trim(),
-        'email': controller.emailController.text.trim(),
+        'email': email,
         'phone': controller.phoneController.text.trim(),
         'createdAt': Timestamp.now(),
       });
 
+      // 4. Navigate
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Account created successfully")),
+        const SnackBar(content: Text("✅ Account created and saved!")),
       );
-
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } catch (e) {
+      print("❌ Error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ Error: ${e.toString()}")),
       );
@@ -124,7 +124,6 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                 ),
                 const SizedBox(height: 30),
-
                 CustomTextField(
                   controller: controller.nameController,
                   focusNode: controller.nameFocus,
@@ -133,7 +132,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   prefixIcon: const Icon(Icons.person_outline_rounded),
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: controller.usernameController,
                   focusNode: controller.usernameFocus,
@@ -142,7 +140,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   prefixIcon: const Icon(Icons.alternate_email_rounded),
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: controller.emailController,
                   focusNode: controller.emailFocus,
@@ -151,7 +148,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   prefixIcon: const Icon(Icons.email_outlined),
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: controller.phoneController,
                   focusNode: controller.phoneFocus,
@@ -160,7 +156,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   prefixIcon: const Icon(Icons.phone_outlined),
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: controller.passwordController,
                   focusNode: controller.passwordFocus,
@@ -181,9 +176,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 CustomButton(
                   onPressed: _isLoading
                       ? null
@@ -199,7 +192,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   text: _isLoading ? "Creating..." : "Create Account",
                 ),
                 const SizedBox(height: 20),
-
                 Center(
                   child: RichText(
                     text: TextSpan(

@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
 class SignupController {
-  final formKey = GlobalKey<FormState>();
+  // Controllers
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
-  final nameController = TextEditingController();
-  final usernameController = TextEditingController();
-  final emailController = TextEditingController();
-  final phoneController = TextEditingController();
-  final passwordController = TextEditingController();
-
-  final nameFocus = FocusNode();
-  final usernameFocus = FocusNode();
-  final emailFocus = FocusNode();
-  final phoneFocus = FocusNode();
-  final passwordFocus = FocusNode();
+  // Focus nodes
+  final FocusNode nameFocus = FocusNode();
+  final FocusNode usernameFocus = FocusNode();
+  final FocusNode emailFocus = FocusNode();
+  final FocusNode phoneFocus = FocusNode();
+  final FocusNode passwordFocus = FocusNode();
 
   void dispose() {
     nameController.dispose();
@@ -28,6 +28,4 @@ class SignupController {
     phoneFocus.dispose();
     passwordFocus.dispose();
   }
-
-  void signUp(BuildContext context, String trim, String trim2, void Function() param3, void Function() param4) {}
 }
