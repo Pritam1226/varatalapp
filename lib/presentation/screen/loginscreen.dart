@@ -1,9 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:varatalapp/controller/login_controller.dart';
 import 'package:varatalapp/core/common/custom_button.dart';
 import 'package:varatalapp/core/common/custom_text_field.dart';
 import 'package:varatalapp/presentation/screen/signupscreen.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,66 +14,37 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final LoginController controller = LoginController();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
-  final _emailFocus = FocusNode();
-  final _passwordFocus = FocusNode();
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Please enter your email address";
-    }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
-      return "Please enter a valid email address";
-    }
-    return null;
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
   }
 
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Please enter your password";
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters long';
-    }
-    return null;
-  }
-
-  Future<void> signIn(String email, String password) async {
+  Future<void> handleLogin() async {
     setState(() => _isLoading = true);
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
 
+    final email = controller.emailController.text.trim();
+    final password = controller.passwordController.text.trim();
+
+    final error = await controller.loginUser(email, password);
+
+    if (error == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("✅ Logged in successfully")),
       );
-
-      // ✅ Navigate after successful login
       Navigator.pushReplacementNamed(context, '/chatList');
-    } catch (e) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Login failed: ${e.toString()}")),
+        SnackBar(content: Text("❌ Login failed: $error")),
       );
-    } finally {
-      setState(() => _isLoading = false);
     }
-  }
 
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    _emailFocus.dispose();
-    _passwordFocus.dispose();
-    super.dispose();
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -104,18 +75,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 30),
                 CustomTextField(
-                  controller: emailController,
-                  focusNode: _emailFocus,
+                  controller: controller.emailController,
+                  focusNode: controller.emailFocus,
                   hintText: "Email",
-                  validator: _validateEmail,
+                  validator: controller.validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
-                  controller: passwordController,
-                  focusNode: _passwordFocus,
+                  controller: controller.passwordController,
+                  focusNode: controller.passwordFocus,
                   hintText: "Password",
-                  validator: _validatePassword,
+                  validator: controller.validatePassword,
                   prefixIcon: const Icon(Icons.lock_outline_rounded),
                   obscureText: !_isPasswordVisible,
                   suffixIcon: IconButton(
@@ -138,10 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       : () {
                           FocusScope.of(context).unfocus();
                           if (_formKey.currentState?.validate() ?? false) {
-                            signIn(
-                              emailController.text.trim(),
-                              passwordController.text.trim(),
-                            );
+                            handleLogin();
                           }
                         },
                   text: _isLoading ? "Logging in..." : "Login",

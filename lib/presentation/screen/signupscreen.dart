@@ -1,9 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:varatalapp/core/common/custom_button.dart';
-import 'package:varatalapp/core/common/custom_text_field.dart';
-import 'package:varatalapp/presentation/screen/loginscreen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'package:varatalapp/core/common/custom_button.dart';
+import 'package:varatalapp/core/common/custom_text_field.dart';
+import 'package:varatalapp/controller/signup_controller.dart';
+import 'package:varatalapp/presentation/screen/loginscreen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -14,49 +17,44 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController usernameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final SignupController controller = SignupController();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
-  final _nameFocus = FocusNode();
-  final _usernameFocus = FocusNode();
-  final _emailFocus = FocusNode();
-  final _phoneFocus = FocusNode();
-  final _passwordFocus = FocusNode();
-
   @override
   void dispose() {
-    nameController.dispose();
-    usernameController.dispose();
-    emailController.dispose();
-    phoneController.dispose();
-    passwordController.dispose();
-    _nameFocus.dispose();
-    _usernameFocus.dispose();
-    _emailFocus.dispose();
-    _phoneFocus.dispose();
-    _passwordFocus.dispose();
+    controller.dispose();
     super.dispose();
   }
 
   Future<void> signUp(String email, String password) async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
+      // Step 1: Create Auth user
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // Step 2: Get current user UID
+      User? user = FirebaseAuth.instance.currentUser;
+
+      // Step 3: Save additional user data in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
+        'uid': user.uid,
+        'name': controller.nameController.text.trim(),
+        'username': controller.usernameController.text.trim(),
+        'email': controller.emailController.text.trim(),
+        'phone': controller.phoneController.text.trim(),
+        'createdAt': Timestamp.now(),
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("✅ Account created successfully")),
       );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -66,55 +64,37 @@ class _SignupScreenState extends State<SignupScreen> {
         SnackBar(content: Text("❌ Error: ${e.toString()}")),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   String? _validateName(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Please enter your full name";
-    }
+    if (value == null || value.isEmpty) return "Please enter your full name";
     return null;
   }
 
-  String? _validateUserame(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Please enter your username";
-    }
+  String? _validateUsername(String? value) {
+    if (value == null || value.isEmpty) return "Please enter your username";
     return null;
   }
 
   String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Please enter your email address";
-    }
+    if (value == null || value.isEmpty) return "Please enter your email";
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
-      return "Please enter a valid email address";
-    }
+    if (!emailRegex.hasMatch(value)) return "Invalid email address";
     return null;
   }
 
   String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Please enter your phone number";
-    }
+    if (value == null || value.isEmpty) return "Please enter your phone number";
     final phoneRegex = RegExp(r'^\+?[\d\s-]{10,}$');
-    if (!phoneRegex.hasMatch(value)) {
-      return 'Please enter a valid phone number (e.g., +1234567890)';
-    }
+    if (!phoneRegex.hasMatch(value)) return "Invalid phone number";
     return null;
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return "Please enter a password";
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters long';
-    }
+    if (value == null || value.isEmpty) return "Please enter a password";
+    if (value.length < 6) return "Password must be at least 6 characters";
     return null;
   }
 
@@ -139,51 +119,55 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 10),
                 Text(
                   "Please fill in the details to continue",
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge
-                      ?.copyWith(color: Colors.grey),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.grey,
+                      ),
                 ),
                 const SizedBox(height: 30),
+
                 CustomTextField(
-                  controller: nameController,
-                  focusNode: _nameFocus,
+                  controller: controller.nameController,
+                  focusNode: controller.nameFocus,
                   hintText: "Full Name",
                   validator: _validateName,
                   prefixIcon: const Icon(Icons.person_outline_rounded),
                 ),
                 const SizedBox(height: 16),
+
                 CustomTextField(
-                  controller: usernameController,
-                  focusNode: _usernameFocus,
+                  controller: controller.usernameController,
+                  focusNode: controller.usernameFocus,
                   hintText: "Username",
-                  validator: _validateUserame,
+                  validator: _validateUsername,
                   prefixIcon: const Icon(Icons.alternate_email_rounded),
                 ),
                 const SizedBox(height: 16),
+
                 CustomTextField(
-                  controller: emailController,
-                  focusNode: _emailFocus,
+                  controller: controller.emailController,
+                  focusNode: controller.emailFocus,
                   hintText: "Email",
                   validator: _validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
                 ),
                 const SizedBox(height: 16),
+
                 CustomTextField(
-                  controller: phoneController,
-                  focusNode: _phoneFocus,
+                  controller: controller.phoneController,
+                  focusNode: controller.phoneFocus,
                   hintText: "Phone Number",
                   validator: _validatePhone,
                   prefixIcon: const Icon(Icons.phone_outlined),
                 ),
                 const SizedBox(height: 16),
+
                 CustomTextField(
-                  controller: passwordController,
-                  focusNode: _passwordFocus,
+                  controller: controller.passwordController,
+                  focusNode: controller.passwordFocus,
                   hintText: "Password",
                   validator: _validatePassword,
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
                   obscureText: !_isPasswordVisible,
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
                   suffixIcon: IconButton(
                     onPressed: () {
                       setState(() {
@@ -197,7 +181,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 30),
+
                 CustomButton(
                   onPressed: _isLoading
                       ? null
@@ -205,14 +191,15 @@ class _SignupScreenState extends State<SignupScreen> {
                           FocusScope.of(context).unfocus();
                           if (_formKey.currentState?.validate() ?? false) {
                             signUp(
-                              emailController.text.trim(),
-                              passwordController.text.trim(),
+                              controller.emailController.text.trim(),
+                              controller.passwordController.text.trim(),
                             );
                           }
                         },
                   text: _isLoading ? "Creating..." : "Create Account",
                 ),
                 const SizedBox(height: 20),
+
                 Center(
                   child: RichText(
                     text: TextSpan(
@@ -221,11 +208,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       children: [
                         TextSpan(
                           text: "Login",
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: Theme.of(context).primaryColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
+                              ?.copyWith(
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
                               Navigator.push(
