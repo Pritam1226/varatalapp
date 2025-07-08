@@ -18,7 +18,7 @@ class CustomTextField extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.focusNode,
-    this.validator,
+    this.validator, required void Function(dynamic _) onChanged,
   });
 
   @override

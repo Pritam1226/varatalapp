@@ -37,7 +37,6 @@ class _SignupScreenState extends State<SignupScreen> {
             content: Text("✅ Signup successful. Please verify your email.")),
       );
 
-      // Optional: show dialog for email verification
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -97,6 +96,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   hintText: "Full Name",
                   validator: controller.validateName,
                   prefixIcon: const Icon(Icons.person_outline_rounded),
+                  onChanged: (_) {}, // ✅ Required
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -105,6 +105,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   hintText: "Username",
                   validator: controller.validateUsername,
                   prefixIcon: const Icon(Icons.alternate_email_rounded),
+                  onChanged: (_) {}, // ✅ Required
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -113,6 +114,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   hintText: "Email",
                   validator: controller.validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
+                  onChanged: (_) {}, // ✅ Required
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -121,6 +123,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   hintText: "Phone Number",
                   validator: controller.validatePhone,
                   prefixIcon: const Icon(Icons.phone_outlined),
+                  onChanged: (_) {}, // ✅ Required
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -142,7 +145,19 @@ class _SignupScreenState extends State<SignupScreen> {
                           : Icons.visibility_rounded,
                     ),
                   ),
+                  onChanged: (_) => setState(() {}), // ✅ Required for strength checker
                 ),
+                const SizedBox(height: 4),
+
+                // 👇 Password Strength Text
+                Text(
+                  controller.getPasswordStrengthText(),
+                  style: TextStyle(
+                    color: controller.getPasswordStrengthColor(),
+                    fontSize: 12,
+                  ),
+                ),
+
                 const SizedBox(height: 30),
                 CustomButton(
                   onPressed: _isLoading

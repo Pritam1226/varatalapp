@@ -4,7 +4,6 @@ import 'package:varatalapp/controller/login_controller.dart';
 import 'package:varatalapp/core/common/custom_button.dart';
 import 'package:varatalapp/core/common/custom_text_field.dart';
 import 'package:varatalapp/presentation/screen/signupscreen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -48,50 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
   }
 
-  // Forgot password function
-  void _showForgotPasswordDialog() {
-    final TextEditingController resetEmailController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Forgot Password'),
-        content: TextFormField(
-          controller: resetEmailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            hintText: 'Enter your email address',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final email = resetEmailController.text.trim();
-              if (email.isNotEmpty) {
-                try {
-                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('📧 Password reset email sent')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('❌ Error: ${e.toString()}')),
-                  );
-                }
-              }
-            },
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,23 +74,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       ?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(height: 30),
-
                 CustomTextField(
                   controller: controller.emailController,
                   focusNode: controller.emailFocus,
                   hintText: "Email",
                   validator: controller.validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
+                  onChanged: (_) {}, // ✅ Required by CustomTextField
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: controller.passwordController,
                   focusNode: controller.passwordFocus,
                   hintText: "Password",
                   validator: controller.validatePassword,
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
                   obscureText: !_isPasswordVisible,
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
                   suffixIcon: IconButton(
                     onPressed: () {
                       setState(() {
@@ -148,13 +102,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           : Icons.visibility_rounded,
                     ),
                   ),
+                  onChanged: (_) {}, // ✅ Required by CustomTextField
                 ),
+                const SizedBox(height: 8),
 
-                // Forgot Password
+                // ✅ Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: _showForgotPasswordDialog,
+                    onPressed: () {
+                      // TODO: Replace with your actual route
+                      Navigator.pushNamed(context, '/forgotPassword');
+                    },
                     child: const Text(
                       "Forgot Password?",
                       style: TextStyle(color: Colors.blue),
@@ -162,8 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 10),
-
+                const SizedBox(height: 20),
                 CustomButton(
                   onPressed: _isLoading
                       ? null
@@ -175,9 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                   text: _isLoading ? "Logging in..." : "Login",
                 ),
-
                 const SizedBox(height: 20),
-
                 Center(
                   child: RichText(
                     text: TextSpan(
