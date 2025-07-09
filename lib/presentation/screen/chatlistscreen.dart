@@ -24,7 +24,7 @@ class ChatListScreen extends StatelessWidget {
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
-              // TODO: Add logic
+              // Add logic here
             },
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'new_group', child: Text('New Group')),
@@ -46,6 +46,7 @@ class ChatListScreen extends StatelessWidget {
           }
 
           final contacts = contactSnapshot.data?.docs ?? [];
+          print("📥 Loaded ${contacts.length} contacts");
 
           if (contacts.isEmpty) {
             return const Center(child: Text('No chats found.'));
@@ -54,33 +55,45 @@ class ChatListScreen extends StatelessWidget {
           return ListView.builder(
             itemCount: contacts.length,
             itemBuilder: (context, index) {
-              final contact = contacts[index];
-              final contactId = contact['contactId'];
-              final contactName = contact['contactName'];
-              final chatId = getChatId(currentUserId!, contactId);
+              final contact = contacts[index].data() as Map<String, dynamic>;
+              final contactId = contact['contactId'] ?? contact['uid'];
+              final contactName = contact['contactName'] ?? contact['name'] ?? 'Unknown';
 
-              return StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
+              if (contactId == null) return const SizedBox.shrink();
+
+              final currentUser = FirebaseAuth.instance.currentUser!;
+              final chatId = getChatId(currentUser.uid, contactId);
+
+              return FutureBuilder<QuerySnapshot>(
+                future: FirebaseFirestore.instance
                     .collection('Chats')
                     .doc(chatId)
                     .collection('messages')
                     .orderBy('timestamp', descending: true)
                     .limit(1)
-                    .snapshots(),
+                    .get(),
                 builder: (context, messageSnapshot) {
+                  if (messageSnapshot.connectionState == ConnectionState.waiting) {
+                    return const ListTile(
+                      title: Text("Loading..."),
+                      subtitle: Text("Fetching message"),
+                    );
+                  }
+
                   String lastMessage = '';
                   Timestamp? time;
 
-                  if (messageSnapshot.hasData && messageSnapshot.data!.docs.isNotEmpty) {
+                  if (messageSnapshot.hasData &&
+                      messageSnapshot.data!.docs.isNotEmpty) {
                     final message = messageSnapshot.data!.docs.first;
-                    lastMessage = message['text'];
+                    lastMessage = message['text'] ?? '';
                     time = message['timestamp'];
                   }
 
                   return ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.person)),
                     title: Text(contactName),
-                    subtitle: Text(lastMessage),
+                    subtitle: Text(lastMessage.isNotEmpty ? lastMessage : "Say hi! 👋"),
                     trailing: time != null
                         ? Text(formatTime(time))
                         : const SizedBox.shrink(),
@@ -124,7 +137,7 @@ class ChatListScreen extends StatelessWidget {
 
   String getChatId(String userId, String contactId) {
     return (userId.compareTo(contactId) < 0)
-        ? '$userId\_$contactId'
-        : '$contactId\_$userId';
+        ? '${userId}_$contactId'
+        : '${contactId}_$userId';
   }
 }
