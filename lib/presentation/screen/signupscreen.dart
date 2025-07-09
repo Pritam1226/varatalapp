@@ -34,32 +34,40 @@ class _SignupScreenState extends State<SignupScreen> {
     if (error == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text("✅ Signup successful. Please verify your email.")),
-      );
-
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Verify Your Email"),
-          content: const Text(
-              "A verification link has been sent to your email. Please verify it before logging in."),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-              child: const Text("OK"),
-            )
-          ],
+          content: Text("✅ Signup successful. Please verify your email."),
+          backgroundColor: Colors.green,
         ),
       );
+
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Verify Your Email"),
+            content: const Text(
+              "A verification link has been sent to your email. Please verify it before logging in.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+                child: const Text("OK"),
+              )
+            ],
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ $error")),
+        SnackBar(
+          content: Text("❌ $error"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -90,42 +98,52 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                 ),
                 const SizedBox(height: 30),
+
+                // Name
                 CustomTextField(
                   controller: controller.nameController,
                   focusNode: controller.nameFocus,
                   hintText: "Full Name",
                   validator: controller.validateName,
                   prefixIcon: const Icon(Icons.person_outline_rounded),
-                  onChanged: (_) {}, // ✅ Required
+                  onChanged: (_) {},
                 ),
                 const SizedBox(height: 16),
+
+                // Username
                 CustomTextField(
                   controller: controller.usernameController,
                   focusNode: controller.usernameFocus,
                   hintText: "Username",
                   validator: controller.validateUsername,
                   prefixIcon: const Icon(Icons.alternate_email_rounded),
-                  onChanged: (_) {}, // ✅ Required
+                  onChanged: (_) {},
                 ),
                 const SizedBox(height: 16),
+
+                // Email
                 CustomTextField(
                   controller: controller.emailController,
                   focusNode: controller.emailFocus,
                   hintText: "Email",
                   validator: controller.validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
-                  onChanged: (_) {}, // ✅ Required
+                  onChanged: (_) {},
                 ),
                 const SizedBox(height: 16),
+
+                // Phone
                 CustomTextField(
                   controller: controller.phoneController,
                   focusNode: controller.phoneFocus,
                   hintText: "Phone Number",
                   validator: controller.validatePhone,
                   prefixIcon: const Icon(Icons.phone_outlined),
-                  onChanged: (_) {}, // ✅ Required
+                  onChanged: (_) {},
                 ),
                 const SizedBox(height: 16),
+
+                // Password
                 CustomTextField(
                   controller: controller.passwordController,
                   focusNode: controller.passwordFocus,
@@ -145,11 +163,11 @@ class _SignupScreenState extends State<SignupScreen> {
                           : Icons.visibility_rounded,
                     ),
                   ),
-                  onChanged: (_) => setState(() {}), // ✅ Required for strength checker
+                  onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 4),
 
-                // 👇 Password Strength Text
+                // Password strength
                 Text(
                   controller.getPasswordStrengthText(),
                   style: TextStyle(
@@ -157,8 +175,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     fontSize: 12,
                   ),
                 ),
-
                 const SizedBox(height: 30),
+
+                // Create Account button
                 CustomButton(
                   onPressed: _isLoading
                       ? null
@@ -171,6 +190,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   text: _isLoading ? "Creating..." : "Create Account",
                 ),
                 const SizedBox(height: 20),
+
+                // Already have account
                 Center(
                   child: RichText(
                     text: TextSpan(
@@ -179,16 +200,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       children: [
                         TextSpan(
                           text: "Login",
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 color: Theme.of(context).primaryColor,
                                 fontWeight: FontWeight.bold,
                               ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
-                              Navigator.push(
+                              Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => const LoginScreen(),
@@ -200,6 +218,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
