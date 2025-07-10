@@ -43,12 +43,10 @@ class _ChatScreenState extends State<ChatScreen> {
       'timestamp': timestamp,
     };
 
-    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages');
+    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
 
-    // Add message
     await chatDoc.collection('messages').add(msgData);
 
-    // Update chat summary
     await chatDoc.set({
       'users': [senderId, receiverId],
       'lastMessage': text,
@@ -58,7 +56,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.clear();
     setState(() => _isTyping = false);
 
-    // Scroll to bottom
     await Future.delayed(const Duration(milliseconds: 150));
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -85,7 +82,6 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(title: Text(widget.contactName)),
       body: Column(
         children: [
-          /// Messages
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -95,11 +91,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snap) {
-                if (!snap.hasData) {
+                if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final docs = snap.data!.docs;
+                if (snap.hasError) {
+                  return Center(child: Text('Error loading messages'));
+                }
+
+                final docs = snap.data?.docs ?? [];
 
                 if (docs.isEmpty) {
                   return const Center(child: Text('No messages yet.'));
@@ -112,16 +112,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemBuilder: (_, idx) {
                     final m = docs[idx].data() as Map<String, dynamic>;
                     final isMe = m['senderId'] == currentUid;
-                    final timeStamp = m['timestamp'] as Timestamp?;
-                    final timeStr = timeStamp != null
-                        ? TimeOfDay.fromDateTime(timeStamp.toDate())
+                    final timestamp = m['timestamp'];
+                    final timeStr = (timestamp is Timestamp)
+                        ? TimeOfDay.fromDateTime(timestamp.toDate())
                             .format(context)
                         : '';
 
                     return Align(
-                      alignment: isMe
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         margin: const EdgeInsets.symmetric(
                             vertical: 4, horizontal: 10),
@@ -133,10 +132,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              m['text'] ?? '',
-                              style: const TextStyle(fontSize: 16),
-                            ),
+                            Text(m['text'] ?? '',
+                                style: const TextStyle(fontSize: 16)),
                             const SizedBox(height: 4),
                             Text(
                               timeStr,
@@ -152,24 +149,16 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-
-          /// Typing Indicator
           if (_isTyping)
             const Padding(
               padding: EdgeInsets.only(left: 16.0, bottom: 4),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  "typing...",
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey,
-                  ),
-                ),
+                child: Text("typing...",
+                    style:
+                        TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
               ),
             ),
-
-          /// Input Section
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -177,9 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.attach_file),
-                  onPressed: () {
-                    // TODO: implement file picker
-                  },
+                  onPressed: () {},
                 ),
                 Expanded(
                   child: TextField(
