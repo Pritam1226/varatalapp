@@ -43,7 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'timestamp': timestamp,
     };
 
-    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId).collection('messages');
 
     // Add message
     await chatDoc.collection('messages').add(msgData);
