@@ -1,6 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 
 class ChatScreen extends StatefulWidget {
   final String contactName;
@@ -21,40 +21,54 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
 
-  /// ✅ Get logged-in user ID from Firebase Auth
-  String get senderId => FirebaseAuth.instance.currentUser?.uid ?? '';
+  void _sendMessage() async {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) return;
 
-  /// ✅ Consistent chatId for both users
-  String get chatId {
-    return (senderId.compareTo(widget.contactId) < 0)
-        ? '${senderId}_${widget.contactId}'
-        : '${widget.contactId}_${senderId}';
-  }
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
 
-  /// ✅ Send message to Firestore
-  Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+    final senderId = currentUser.uid;
+    final receiverId = widget.contactId;
+
+    final chatId = senderId.compareTo(receiverId) < 0
+        ? '$senderId\_$receiverId'
+        : '$receiverId\_$senderId';
 
     final messageData = {
-      'sender': senderId,
-      'text': text.trim(),
+      'senderId': senderId,
+      'text': message,
       'timestamp': FieldValue.serverTimestamp(),
-      'contactId': widget.contactId,
-      'contactName': widget.contactName,
     };
 
     await FirebaseFirestore.instance
-        .collection('Chats')
+        .collection('users')
+        .doc(senderId)
+        .collection('chats')
         .doc(chatId)
         .collection('messages')
         .add(messageData);
-  }
 
-  void _handleSend() {
-    final message = _messageController.text;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(receiverId)
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .add(messageData);
+
     _messageController.clear();
-    sendMessage(message);
-    setState(() => _isTyping = false);
+    setState(() {
+      _isTyping = false;
+    });
+
+    Future.delayed(Duration(milliseconds: 100), () {
+      _scrollController.animateTo(
+        0.0,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   @override
@@ -66,42 +80,47 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    final chatId = currentUserId.compareTo(widget.contactId) < 0
+        ? '$currentUserId\_${widget.contactId}'
+        : '${widget.contactId}_$currentUserId';
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.contactName)),
       body: Column(
         children: [
-          /// 🔁 Real-time chat messages
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('Chats')
+                  .collection('users')
+                  .doc(currentUserId)
+                  .collection('chats')
                   .doc(chatId)
                   .collection('messages')
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator());
                 }
 
-                final docs = snapshot.data!.docs;
+                final messages = snapshot.data!.docs;
 
                 return ListView.builder(
-                  controller: _scrollController,
                   reverse: true,
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final isMe = data['sender'] == senderId;
-                    final text = data['text'] ?? '';
-                    final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-
+                  controller: _scrollController,
+                  itemCount: messages.length,
+                  itemBuilder: (ctx, index) {
+                    final msg = messages[index];
+                    final isMe = msg['senderId'] == currentUserId;
                     return Align(
                       alignment:
                           isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         margin: const EdgeInsets.symmetric(
-                            vertical: 4.0, horizontal: 10.0),
+                          vertical: 4.0,
+                          horizontal: 10.0,
+                        ),
                         padding: const EdgeInsets.all(12.0),
                         decoration: BoxDecoration(
                           color: isMe ? Colors.blue[200] : Colors.grey[300],
@@ -110,15 +129,20 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(text, style: const TextStyle(fontSize: 16)),
-                            if (timestamp != null)
-                              Text(
-                                "${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}",
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.black54,
-                                ),
+                            Text(msg['text'], style: TextStyle(fontSize: 16)),
+                            SizedBox(height: 4),
+                            Text(
+                              msg['timestamp'] != null
+                                  ? (msg['timestamp'] as Timestamp)
+                                      .toDate()
+                                      .toString()
+                                      .substring(11, 16)
+                                  : '',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[700],
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -128,36 +152,36 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-
-          /// Typing indicator
           if (_isTyping)
-            const Padding(
-              padding: EdgeInsets.only(left: 16.0, bottom: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, bottom: 4),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "typing...",
-                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ),
-
-          /// Message input
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.attach_file),
+                  icon: Icon(Icons.attach_file),
                   onPressed: () {
-                    // You can add file picker here
+                    // TODO: Add file/image picker
                   },
                 ),
                 Expanded(
                   child: TextField(
                     controller: _messageController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: "Type your message...",
                       border: InputBorder.none,
                     ),
@@ -168,10 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                IconButton(
-                  onPressed: _handleSend,
-                  icon: const Icon(Icons.send),
-                ),
+                IconButton(onPressed: _sendMessage, icon: Icon(Icons.send)),
               ],
             ),
           ),
