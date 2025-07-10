@@ -1,10 +1,11 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:intl/intl.dart';
 import 'addcontact_screen.dart';
 import 'chatscreen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
@@ -23,9 +24,7 @@ class ChatListScreen extends StatelessWidget {
         title: const Text("Chats"),
         actions: [
           PopupMenuButton<String>(
-            onSelected: (value) {
-              // Add logic here
-            },
+            onSelected: (value) {},
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'new_group', child: Text('New Group')),
               PopupMenuItem(value: 'settings', child: Text('Settings')),
@@ -38,74 +37,84 @@ class ChatListScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('users')
             .doc(currentUserId)
-            .collection('contacts')
+            .collection('chats')
             .snapshots(),
-        builder: (context, contactSnapshot) {
-          if (contactSnapshot.connectionState == ConnectionState.waiting) {
+        builder: (context, chatSnapshot) {
+          if (!chatSnapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final contacts = contactSnapshot.data?.docs ?? [];
-          print("📥 Loaded ${contacts.length} contacts");
+          final chatDocs = chatSnapshot.data!.docs;
 
-          if (contacts.isEmpty) {
+          if (chatDocs.isEmpty) {
             return const Center(child: Text('No chats found.'));
           }
 
           return ListView.builder(
-            itemCount: contacts.length,
+            itemCount: chatDocs.length,
             itemBuilder: (context, index) {
-              final contact = contacts[index].data() as Map<String, dynamic>;
-              final contactId = contact['contactId'] ?? contact['uid'];
-              final contactName = contact['contactName'] ?? contact['name'] ?? 'Unknown';
+              final chatDoc = chatDocs[index];
+              final chatId = chatDoc.id;
+              final participantId = chatDoc['participantId'];
 
-              if (contactId == null) return const SizedBox.shrink();
-
-              final currentUser = FirebaseAuth.instance.currentUser!;
-              final chatId = getChatId(currentUser.uid, contactId);
-
-              return FutureBuilder<QuerySnapshot>(
+              return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
-                    .collection('Chats')
-                    .doc(chatId)
-                    .collection('messages')
-                    .orderBy('timestamp', descending: true)
-                    .limit(1)
+                    .collection('users')
+                    .doc(participantId)
                     .get(),
-                builder: (context, messageSnapshot) {
-                  if (messageSnapshot.connectionState == ConnectionState.waiting) {
-                    return const ListTile(
-                      title: Text("Loading..."),
-                      subtitle: Text("Fetching message"),
-                    );
+                builder: (context, userSnapshot) {
+                  if (!userSnapshot.hasData) {
+                    return const ListTile(title: Text('Loading...'));
                   }
 
-                  String lastMessage = '';
-                  Timestamp? time;
+                  final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                  final contactName = userData['name'] ?? 'Unknown';
 
-                  if (messageSnapshot.hasData &&
-                      messageSnapshot.data!.docs.isNotEmpty) {
-                    final message = messageSnapshot.data!.docs.first;
-                    lastMessage = message['text'] ?? '';
-                    time = message['timestamp'];
-                  }
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(currentUserId)
+                        .collection('chats')
+                        .doc(chatId)
+                        .collection('messages')
+                        .orderBy('timestamp', descending: true)
+                        .limit(1)
+                        .snapshots(),
+                    builder: (context, msgSnapshot) {
+                      String lastMessage = '';
+                      Timestamp? time;
 
-                  return ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text(contactName),
-                    subtitle: Text(lastMessage.isNotEmpty ? lastMessage : "Say hi! 👋"),
-                    trailing: time != null
-                        ? Text(formatTime(time))
-                        : const SizedBox.shrink(),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(
-                            contactName: contactName,
-                            contactId: contactId,
+                      if (msgSnapshot.hasData &&
+                          msgSnapshot.data!.docs.isNotEmpty) {
+                        final msg = msgSnapshot.data!.docs.first;
+                        lastMessage = msg['text'];
+                        time = msg['timestamp'];
+                      }
+
+                      return ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.person)),
+                        title: Text(contactName),
+                        subtitle: Text(
+                          lastMessage.isNotEmpty ? lastMessage : 'Start a chat...',
+                          style: TextStyle(
+                            fontStyle:
+                                lastMessage.isEmpty ? FontStyle.italic : null,
                           ),
                         ),
+                        trailing: time != null
+                            ? Text(formatTime(time))
+                            : const SizedBox.shrink(),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatScreen(
+                                contactName: contactName,
+                                contactId: participantId,
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   );
@@ -133,11 +142,5 @@ class ChatListScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String getChatId(String userId, String contactId) {
-    return (userId.compareTo(contactId) < 0)
-        ? '${userId}_$contactId'
-        : '${contactId}_$userId';
   }
 }
