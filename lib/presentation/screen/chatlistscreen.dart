@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -33,97 +32,76 @@ class ChatListScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUserId)
-            .collection('chats')
-            .snapshots(),
-        builder: (context, chatSnapshot) {
-          if (!chatSnapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: currentUserId == null
+          ? const Center(child: Text('User not logged in'))
+          : StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chats')
+                  .where('users', arrayContains: currentUserId)
+                  .orderBy('lastMessageTime', descending: true)
+                  .snapshots(),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          final chatDocs = chatSnapshot.data!.docs;
+                if (snap.hasError) {
+                  return Center(child: Text('Error: ${snap.error}'));
+                }
 
-          if (chatDocs.isEmpty) {
-            return const Center(child: Text('No chats found.'));
-          }
+                final docs = snap.data?.docs ?? [];
+                if (docs.isEmpty) {
+                  return const Center(child: Text('No chats found'));
+                }
 
-          return ListView.builder(
-            itemCount: chatDocs.length,
-            itemBuilder: (context, index) {
-              final chatDoc = chatDocs[index];
-              final chatId = chatDoc.id;
-              final participantId = chatDoc['participantId'];
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, idx) {
+                    final doc = docs[idx];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final users = List<String>.from(data['users'] ?? []);
+                    final otherId =
+                        users.firstWhere((uid) => uid != currentUserId);
 
-              return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(participantId)
-                    .get(),
-                builder: (context, userSnapshot) {
-                  if (!userSnapshot.hasData) {
-                    return const ListTile(title: Text('Loading...'));
-                  }
+                    String contactName = 'Contact';
+                    if (data.containsKey('contactNames')) {
+                      final contactNames =
+                          data['contactNames'] as Map<String, dynamic>;
+                      contactName = contactNames[otherId] ?? 'Contact';
+                    }
 
-                  final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                  final contactName = userData['name'] ?? 'Unknown';
+                    final lastMsg = data['lastMessage'] ?? '';
+                    final time = data['lastMessageTime'] as Timestamp?;
+                    final timeStr =
+                        time != null ? formatTime(time) : '';
 
-                  return StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(currentUserId)
-                        .collection('chats')
-                        .doc(chatId)
-                        .collection('messages')
-                        .orderBy('timestamp', descending: true)
-                        .limit(1)
-                        .snapshots(),
-                    builder: (context, msgSnapshot) {
-                      String lastMessage = '';
-                      Timestamp? time;
-
-                      if (msgSnapshot.hasData &&
-                          msgSnapshot.data!.docs.isNotEmpty) {
-                        final msg = msgSnapshot.data!.docs.first;
-                        lastMessage = msg['text'];
-                        time = msg['timestamp'];
-                      }
-
-                      return ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.person)),
-                        title: Text(contactName),
-                        subtitle: Text(
-                          lastMessage.isNotEmpty ? lastMessage : 'Start a chat...',
-                          style: TextStyle(
-                            fontStyle:
-                                lastMessage.isEmpty ? FontStyle.italic : null,
-                          ),
+                    return ListTile(
+                      leading: const CircleAvatar(child: Icon(Icons.person)),
+                      title: Text(contactName),
+                      subtitle: Text(
+                        lastMsg.isNotEmpty ? lastMsg : 'Start a chat...',
+                        style: TextStyle(
+                          fontStyle:
+                              lastMsg.isEmpty ? FontStyle.italic : null,
                         ),
-                        trailing: time != null
-                            ? Text(formatTime(time))
-                            : const SizedBox.shrink(),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                contactName: contactName,
-                                contactId: participantId,
-                              ),
+                      ),
+                      trailing: Text(timeStr),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              contactName: contactName,
+                              contactId: otherId,
                             ),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,
         backgroundColor: Theme.of(context).primaryColor,

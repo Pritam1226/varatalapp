@@ -45,12 +45,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
 
+    // 1️⃣ Add message under chats/{chatId}/messages
     await chatDoc.collection('messages').add(msgData);
+
+    // 2️⃣ Update chat summary with contactNames map
+    final currentUserName = currentUser.displayName ?? 'You';
+    final receiverSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(receiverId)
+        .get();
+    final receiverName = receiverSnapshot['name'] ?? 'Contact';
 
     await chatDoc.set({
       'users': [senderId, receiverId],
       'lastMessage': text,
       'lastMessageTime': timestamp,
+      'contactNames': {
+        senderId: currentUserName,
+        receiverId: receiverName,
+      },
     }, SetOptions(merge: true));
 
     _messageController.clear();
@@ -155,8 +168,8 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text("typing...",
-                    style:
-                        TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+                    style: TextStyle(
+                        fontStyle: FontStyle.italic, color: Colors.grey)),
               ),
             ),
           const Divider(height: 1),
