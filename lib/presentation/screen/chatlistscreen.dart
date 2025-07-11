@@ -3,16 +3,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:intl/intl.dart';
+
 import 'addcontact_screen.dart';
 import 'chatscreen.dart';
+import 'profile_screen.dart'; // ⬅️ NEW
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
 
-  String formatTime(Timestamp timestamp) {
-    final date = timestamp.toDate();
-    return DateFormat('hh:mm a').format(date);
-  }
+  String formatTime(Timestamp timestamp) =>
+      DateFormat('hh:mm a').format(timestamp.toDate());
 
   @override
   Widget build(BuildContext context) {
@@ -20,11 +20,31 @@ class ChatListScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Chats"),
+        title: const Text('Chats'),
         actions: [
           PopupMenuButton<String>(
-            onSelected: (value) {},
+            onSelected: (value) async {
+              switch (value) {
+                case 'profile':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                  break;
+                case 'new_group':
+                  // TODO: implement new‑group flow
+                  break;
+                case 'settings':
+                  // TODO: implement settings flow
+                  break;
+                case 'logout':
+                  await FirebaseAuth.instance.signOut();
+                  if (context.mounted) Navigator.popUntil(context, (r) => r.isFirst);
+                  break;
+              }
+            },
             itemBuilder: (context) => const [
+              PopupMenuItem(value: 'profile', child: Text('Profile')),
               PopupMenuItem(value: 'new_group', child: Text('New Group')),
               PopupMenuItem(value: 'settings', child: Text('Settings')),
               PopupMenuItem(value: 'logout', child: Text('Logout')),
@@ -44,7 +64,6 @@ class ChatListScreen extends StatelessWidget {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 if (snap.hasError) {
                   return Center(child: Text('Error: ${snap.error}'));
                 }
@@ -57,46 +76,43 @@ class ChatListScreen extends StatelessWidget {
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, idx) {
-                    final doc = docs[idx];
-                    final data = doc.data() as Map<String, dynamic>;
+                    final data = docs[idx].data() as Map<String, dynamic>;
                     final users = List<String>.from(data['users'] ?? []);
-                    final otherId =
-                        users.firstWhere((uid) => uid != currentUserId);
+                    final otherId = users.firstWhere(
+                      (uid) => uid != currentUserId,
+                      orElse: () => '',
+                    );
 
+                    // Fallbacks
                     String contactName = 'Contact';
                     if (data.containsKey('contactNames')) {
-                      final contactNames =
-                          data['contactNames'] as Map<String, dynamic>;
-                      contactName = contactNames[otherId] ?? 'Contact';
+                      final names = Map<String, dynamic>.from(data['contactNames']);
+                      contactName = names[otherId] ?? contactName;
                     }
 
                     final lastMsg = data['lastMessage'] ?? '';
                     final time = data['lastMessageTime'] as Timestamp?;
-                    final timeStr =
-                        time != null ? formatTime(time) : '';
+                    final timeStr = time != null ? formatTime(time) : '';
 
                     return ListTile(
                       leading: const CircleAvatar(child: Icon(Icons.person)),
                       title: Text(contactName),
                       subtitle: Text(
-                        lastMsg.isNotEmpty ? lastMsg : 'Start a chat...',
+                        lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
                         style: TextStyle(
-                          fontStyle:
-                              lastMsg.isEmpty ? FontStyle.italic : null,
+                          fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
                         ),
                       ),
                       trailing: Text(timeStr),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                              contactName: contactName,
-                              contactId: otherId,
-                            ),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            contactName: contactName,
+                            contactId: otherId,
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     );
                   },
                 );
@@ -105,17 +121,15 @@ class ChatListScreen extends StatelessWidget {
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,
         backgroundColor: Theme.of(context).primaryColor,
-        tooltip: "Options",
+        tooltip: 'Options',
         children: [
           SpeedDialChild(
             child: const Icon(Icons.person_add),
             label: 'Add Contact',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddContactScreen()),
-              );
-            },
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddContactScreen()),
+            ),
           ),
         ],
       ),
