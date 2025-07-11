@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // ✅ Firebase core import
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+
+import 'package:varatalapp/controller/theme_controller.dart';
 import 'package:varatalapp/config/theme/app_theme.dart';
 import 'package:varatalapp/presentation/screen/loginscreen.dart';
 import 'package:varatalapp/presentation/screen/chatlistscreen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // ✅ Required before Firebase init
-  await Firebase.initializeApp(); // ✅ Initialize Firebase
-  runApp(const MyApp()); // ✅ Run the app
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();           // ✅ Firebase init
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeController(),     // ✅ Provide theme controller
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -15,13 +23,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Vartalap Chat App',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const LoginScreen(),
-      routes: {
-        '/chatList': (context) => const ChatListScreen(),
+    return Consumer<ThemeController>(
+      builder: (context, themeController, _) {
+        return MaterialApp(
+          title: 'Vartalap Chat App',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,        // 🌞 Light theme
+          darkTheme: AppTheme.darkTheme,     // 🌚 Dark theme (add it in app_theme.dart)
+          themeMode: themeController.currentTheme,
+          home: const LoginScreen(),
+          routes: {
+            '/chatList': (_) => const ChatListScreen(),
+          },
+        );
       },
     );
   }

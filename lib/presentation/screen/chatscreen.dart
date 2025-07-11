@@ -34,7 +34,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final senderId = currentUser.uid;
     final receiverId = widget.contactId;
     final chatId = _chatId(senderId, receiverId);
-
     final timestamp = FieldValue.serverTimestamp();
 
     final msgData = {
@@ -48,14 +47,20 @@ class _ChatScreenState extends State<ChatScreen> {
     // 1️⃣ Add message under chats/{chatId}/messages
     await chatDoc.collection('messages').add(msgData);
 
-    // 2️⃣ Update chat summary with contactNames map
-    final currentUserName = currentUser.displayName ?? 'You';
+    // 2️⃣ Fetch actual user names from Firestore
+    final senderSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(senderId)
+        .get();
+    final currentUserName = senderSnapshot.data()?['name'] ?? 'Unknown';
+
     final receiverSnapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(receiverId)
         .get();
-    final receiverName = receiverSnapshot['name'] ?? 'Contact';
+    final receiverName = receiverSnapshot.data()?['name'] ?? 'Contact';
 
+    // 3️⃣ Update chat summary
     await chatDoc.set({
       'users': [senderId, receiverId],
       'lastMessage': text,

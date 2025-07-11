@@ -6,7 +6,8 @@ import 'package:intl/intl.dart';
 
 import 'addcontact_screen.dart';
 import 'chatscreen.dart';
-import 'profile_screen.dart'; // ⬅️ NEW
+import 'profile_screen.dart';
+import 'settings_screen.dart'; // ✅ Import the settings screen
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
@@ -32,10 +33,13 @@ class ChatListScreen extends StatelessWidget {
                   );
                   break;
                 case 'new_group':
-                  // TODO: implement new‑group flow
+                  // TODO: implement new group flow
                   break;
                 case 'settings':
-                  // TODO: implement settings flow
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()), // ✅ Open settings
+                  );
                   break;
                 case 'logout':
                   await FirebaseAuth.instance.signOut();
@@ -76,14 +80,15 @@ class ChatListScreen extends StatelessWidget {
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, idx) {
-                    final data = docs[idx].data() as Map<String, dynamic>;
+                    final doc = docs[idx];
+                    final chatId = doc.id;
+                    final data = doc.data() as Map<String, dynamic>;
                     final users = List<String>.from(data['users'] ?? []);
                     final otherId = users.firstWhere(
                       (uid) => uid != currentUserId,
                       orElse: () => '',
                     );
 
-                    // Fallbacks
                     String contactName = 'Contact';
                     if (data.containsKey('contactNames')) {
                       final names = Map<String, dynamic>.from(data['contactNames']);
@@ -94,22 +99,43 @@ class ChatListScreen extends StatelessWidget {
                     final time = data['lastMessageTime'] as Timestamp?;
                     final timeStr = time != null ? formatTime(time) : '';
 
-                    return ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person)),
-                      title: Text(contactName),
-                      subtitle: Text(
-                        lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
-                        style: TextStyle(
-                          fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
+                    return Dismissible(
+                      key: Key(chatId),
+                      background: _buildSwipeActionLeft(),
+                      secondaryBackground: _buildSwipeActionRight(),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.endToStart) {
+                          final confirm = await _showConfirmDialog(context, 'Delete this chat?');
+                          if (confirm) {
+                            await FirebaseFirestore.instance.collection('chats').doc(chatId).delete();
+                          }
+                          return confirm;
+                        } else if (direction == DismissDirection.startToEnd) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('$contactName archived')),
+                          );
+                          // Optional: set 'archived' flag in the chat document
+                          return false;
+                        }
+                        return false;
+                      },
+                      child: ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.person)),
+                        title: Text(contactName),
+                        subtitle: Text(
+                          lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
+                          style: TextStyle(
+                            fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
+                          ),
                         ),
-                      ),
-                      trailing: Text(timeStr),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(
-                            contactName: contactName,
-                            contactId: otherId,
+                        trailing: Text(timeStr),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              contactName: contactName,
+                              contactId: otherId,
+                            ),
                           ),
                         ),
                       ),
@@ -134,5 +160,60 @@ class ChatListScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Left swipe (Archive)
+  Widget _buildSwipeActionLeft() {
+    return Container(
+      color: Colors.blue,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      alignment: Alignment.centerLeft,
+      child: const Row(
+        children: [
+          Icon(Icons.archive, color: Colors.white),
+          SizedBox(width: 8),
+          Text('Archive', style: TextStyle(color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
+  /// Right swipe (Delete)
+  Widget _buildSwipeActionRight() {
+    return Container(
+      color: Colors.red,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      alignment: Alignment.centerRight,
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Icon(Icons.delete, color: Colors.white),
+          SizedBox(width: 8),
+          Text('Delete', style: TextStyle(color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
+  /// Confirm delete dialog
+  Future<bool> _showConfirmDialog(BuildContext context, String msg) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Confirm'),
+            content: Text(msg),
+            actions: [
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.pop(ctx, false),
+              ),
+              ElevatedButton(
+                child: const Text('Yes'),
+                onPressed: () => Navigator.pop(ctx, true),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
