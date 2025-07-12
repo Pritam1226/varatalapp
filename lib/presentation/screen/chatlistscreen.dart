@@ -8,10 +8,18 @@ import 'addcontact_screen.dart';
 import 'chatscreen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
-import 'package:varatalapp/presentation/screen/contact/contact_profile_popup.dart'; // ✅ Import the popup
+import 'package:varatalapp/presentation/screen/contact/contact_profile_popup.dart';
 
-class ChatListScreen extends StatelessWidget {
+class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
+
+  @override
+  State<ChatListScreen> createState() => _ChatListScreenState();
+}
+
+class _ChatListScreenState extends State<ChatListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final ValueNotifier<String> _searchQuery = ValueNotifier('');
 
   String formatTime(Timestamp timestamp) =>
       DateFormat('hh:mm a').format(timestamp.toDate());
@@ -34,7 +42,6 @@ class ChatListScreen extends StatelessWidget {
                   );
                   break;
                 case 'new_group':
-                  // TODO: implement new group flow
                   break;
                 case 'settings':
                   Navigator.push(
@@ -61,128 +68,237 @@ class ChatListScreen extends StatelessWidget {
       ),
       body: currentUserId == null
           ? const Center(child: Text('User not logged in'))
-          : StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('chats')
-                  .where('users', arrayContains: currentUserId)
-                  .orderBy('lastMessageTime', descending: true)
-                  .snapshots(),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snap.hasError) {
-                  return Center(child: Text('Error: ${snap.error}'));
-                }
-
-                final docs = snap.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return const Center(child: Text('No chats found'));
-                }
-
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, idx) {
-                    final doc = docs[idx];
-                    final chatId = doc.id;
-                    final data = doc.data() as Map<String, dynamic>;
-                    final users = List<String>.from(data['users'] ?? []);
-                    final otherId = users.firstWhere(
-                      (uid) => uid != currentUserId,
-                      orElse: () => '',
-                    );
-
-                    String contactName = 'Contact';
-                    String? profileImageUrl;
-                    if (data.containsKey('contactNames')) {
-                      final names = Map<String, dynamic>.from(data['contactNames']);
-                      contactName = names[otherId] ?? contactName;
-                    }
-                    if (data.containsKey('contactProfileImages')) {
-                      final imgs = Map<String, dynamic>.from(data['contactProfileImages']);
-                      profileImageUrl = imgs[otherId];
-                    }
-
-                    final lastMsg = data['lastMessage'] ?? '';
-                    final time = data['lastMessageTime'] as Timestamp?;
-                    final timeStr = time != null ? formatTime(time) : '';
-
-                    return Dismissible(
-                      key: Key(chatId),
-                      background: _buildSwipeActionLeft(),
-                      secondaryBackground: _buildSwipeActionRight(),
-                      confirmDismiss: (direction) async {
-                        if (direction == DismissDirection.endToStart) {
-                          final confirm = await _showConfirmDialog(context, 'Delete this chat?');
-                          if (confirm) {
-                            await FirebaseFirestore.instance.collection('chats').doc(chatId).delete();
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) =>
+                        _searchQuery.value = value.toLowerCase(),
+                    decoration: InputDecoration(
+                      hintText: 'Search contacts or messages...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: ValueListenableBuilder<String>(
+                        valueListenable: _searchQuery,
+                        builder: (context, value, _) {
+                          return value.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _searchQuery.value = '';
+                                  },
+                                )
+                              : const SizedBox.shrink();
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: _searchQuery,
+                    builder: (context, query, _) {
+                      return FutureBuilder<List<DocumentSnapshot>>(
+                        future: _fetchFilteredChats(currentUserId, query),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
                           }
-                          return confirm;
-                        } else if (direction == DismissDirection.startToEnd) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('$contactName archived')),
-                          );
-                          return false;
-                        }
-                        return false;
-                      },
-                      child: ListTile(
-                        leading: GestureDetector(
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (_) => ContactProfilePopup(
-                                contactId: otherId,
-                                contactName: contactName,
-                                profileImageUrl: profileImageUrl,
+                          if (snapshot.hasError) {
+                            return Center(child: Text('Error: ${snapshot.error}'));
+                          }
+                          final filteredDocs = snapshot.data ?? [];
+                          if (filteredDocs.isEmpty) {
+                            return const Center(
+                              child: Text(
+                                'No results found',
+                                style: TextStyle(fontSize: 16, color: Colors.grey),
                               ),
                             );
-                          },
-                          child: CircleAvatar(
-                            backgroundImage:
-                                profileImageUrl != null ? NetworkImage(profileImageUrl) : null,
-                            child: profileImageUrl == null ? const Icon(Icons.person) : null,
-                          ),
-                        ),
-                        title: Text(contactName),
-                        subtitle: Text(
-                          lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
-                          style: TextStyle(
-                            fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
-                          ),
-                        ),
-                        trailing: Text(timeStr),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                              contactName: contactName,
-                              contactId: otherId,
-                            ),
-                          ),
-                        ),
+                          }
+
+                          return ListView.builder(
+                            itemCount: filteredDocs.length,
+                            itemBuilder: (context, idx) {
+                              final doc = filteredDocs[idx];
+                              final chatId = doc.id;
+                              final data = doc.data() as Map<String, dynamic>;
+                              final users = List<String>.from(data['users'] ?? []);
+                              final otherId = users.firstWhere((uid) => uid != currentUserId, orElse: () => '');
+
+                              String contactName = 'Contact';
+                              String? profileImageUrl;
+                              if (data.containsKey('contactNames')) {
+                                final names = Map<String, dynamic>.from(data['contactNames']);
+                                contactName = names[otherId] ?? contactName;
+                              }
+                              if (data.containsKey('contactProfileImages')) {
+                                final imgs = Map<String, dynamic>.from(data['contactProfileImages']);
+                                profileImageUrl = imgs[otherId];
+                              }
+
+                              final lastMsg = data['lastMessage'] ?? '';
+                              final time = data['lastMessageTime'] as Timestamp?;
+                              final timeStr = time != null ? formatTime(time) : '';
+
+                              return Dismissible(
+                                key: Key(chatId),
+                                background: _buildSwipeActionLeft(),
+                                secondaryBackground: _buildSwipeActionRight(),
+                                confirmDismiss: (direction) async {
+                                  if (direction == DismissDirection.endToStart) {
+                                    final confirm =
+                                        await _showConfirmDialog(context, 'Delete this chat?');
+                                    if (confirm) {
+                                      await FirebaseFirestore.instance
+                                          .collection('chats')
+                                          .doc(chatId)
+                                          .delete();
+                                    }
+                                    return confirm;
+                                  } else if (direction == DismissDirection.startToEnd) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('$contactName archived')),
+                                    );
+                                    return false;
+                                  }
+                                  return false;
+                                },
+                                child: ListTile(
+                                  leading: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (_) => ContactProfilePopup(
+                                          contactId: otherId,
+                                          contactName: contactName,
+                                          profileImageUrl: profileImageUrl,
+                                        ),
+                                      );
+                                    },
+                                    child: CircleAvatar(
+                                      backgroundImage: profileImageUrl != null
+                                          ? NetworkImage(profileImageUrl)
+                                          : null,
+                                      child: profileImageUrl == null
+                                          ? const Icon(Icons.person)
+                                          : null,
+                                    ),
+                                  ),
+                                  title: Text(contactName),
+                                  subtitle: Text(
+                                    lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
+                                    style: TextStyle(
+                                      fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
+                                    ),
+                                  ),
+                                  trailing: Text(timeStr),
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ChatScreen(
+                                        contactName: contactName,
+                                        contactId: otherId,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 72.0, top: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.remove_red_eye),
+                        label: const Text('View Status'),
                       ),
-                    );
-                  },
-                );
-              },
+                      ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.history),
+                        label: const Text('My Status'),
+                      ),
+                    ],
+                  ),
+                )
+              ],
             ),
-      floatingActionButton: SpeedDial(
-        animatedIcon: AnimatedIcons.menu_close,
-        backgroundColor: Theme.of(context).primaryColor,
-        tooltip: 'Options',
-        children: [
-          SpeedDialChild(
-            child: const Icon(Icons.person_add),
-            label: 'Add Contact',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddContactScreen()),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: SpeedDial(
+          animatedIcon: AnimatedIcons.menu_close,
+          backgroundColor: Theme.of(context).primaryColor,
+          tooltip: 'Options',
+          children: [
+            SpeedDialChild(
+              child: const Icon(Icons.person_add),
+              label: 'Add Contact',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddContactScreen()),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  Future<List<DocumentSnapshot>> _fetchFilteredChats(String currentUserId, String query) async {
+    final queryLower = query.toLowerCase();
+    final chatSnap = await FirebaseFirestore.instance
+        .collection('chats')
+        .where('users', arrayContains: currentUserId)
+        .orderBy('lastMessageTime', descending: true)
+        .get();
+
+    final matchedDocs = <DocumentSnapshot>[];
+
+    for (final doc in chatSnap.docs) {
+      final data = doc.data();
+      final users = List<String>.from(data['users'] ?? []);
+      final otherId = users.firstWhere((uid) => uid != currentUserId, orElse: () => '');
+      final contactNames = Map<String, dynamic>.from(data['contactNames'] ?? {});
+      final name = contactNames[otherId]?.toString().toLowerCase() ?? '';
+
+      final lastMessage = (data['lastMessage'] ?? '').toString().toLowerCase();
+
+      if (name.contains(queryLower) || lastMessage.contains(queryLower)) {
+        matchedDocs.add(doc);
+        continue;
+      }
+
+      final msgSnap = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(doc.id)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      final hasMatch = msgSnap.docs.any((m) {
+        final text = (m['text'] ?? '').toString().toLowerCase();
+        return text.contains(queryLower);
+      });
+
+      if (hasMatch) {
+        matchedDocs.add(doc);
+      }
+    }
+
+    return matchedDocs;
   }
 
   Widget _buildSwipeActionLeft() {
