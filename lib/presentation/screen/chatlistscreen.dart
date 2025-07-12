@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+// import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:intl/intl.dart';
 
-import 'addcontact_screen.dart';
+// import 'addcontact_screen.dart';
 import 'chatscreen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
@@ -30,7 +30,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chats'),
+        title: const Text('Vartalap'),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -106,18 +106,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       return FutureBuilder<List<DocumentSnapshot>>(
                         future: _fetchFilteredChats(currentUserId, query),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
                           }
                           if (snapshot.hasError) {
-                            return Center(child: Text('Error: ${snapshot.error}'));
+                            return Center(
+                              child: Text('Error: ${snapshot.error}'),
+                            );
                           }
                           final filteredDocs = snapshot.data ?? [];
                           if (filteredDocs.isEmpty) {
                             return const Center(
                               child: Text(
                                 'No results found',
-                                style: TextStyle(fontSize: 16, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
                               ),
                             );
                           }
@@ -128,32 +136,47 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               final doc = filteredDocs[idx];
                               final chatId = doc.id;
                               final data = doc.data() as Map<String, dynamic>;
-                              final users = List<String>.from(data['users'] ?? []);
-                              final otherId = users.firstWhere((uid) => uid != currentUserId, orElse: () => '');
+                              final users = List<String>.from(
+                                data['users'] ?? [],
+                              );
+                              final otherId = users.firstWhere(
+                                (uid) => uid != currentUserId,
+                                orElse: () => '',
+                              );
 
                               String contactName = 'Contact';
                               String? profileImageUrl;
                               if (data.containsKey('contactNames')) {
-                                final names = Map<String, dynamic>.from(data['contactNames']);
+                                final names = Map<String, dynamic>.from(
+                                  data['contactNames'],
+                                );
                                 contactName = names[otherId] ?? contactName;
                               }
                               if (data.containsKey('contactProfileImages')) {
-                                final imgs = Map<String, dynamic>.from(data['contactProfileImages']);
+                                final imgs = Map<String, dynamic>.from(
+                                  data['contactProfileImages'],
+                                );
                                 profileImageUrl = imgs[otherId];
                               }
 
                               final lastMsg = data['lastMessage'] ?? '';
-                              final time = data['lastMessageTime'] as Timestamp?;
-                              final timeStr = time != null ? formatTime(time) : '';
+                              final time =
+                                  data['lastMessageTime'] as Timestamp?;
+                              final timeStr = time != null
+                                  ? formatTime(time)
+                                  : '';
 
                               return Dismissible(
                                 key: Key(chatId),
                                 background: _buildSwipeActionLeft(),
                                 secondaryBackground: _buildSwipeActionRight(),
                                 confirmDismiss: (direction) async {
-                                  if (direction == DismissDirection.endToStart) {
-                                    final confirm =
-                                        await _showConfirmDialog(context, 'Delete this chat?');
+                                  if (direction ==
+                                      DismissDirection.endToStart) {
+                                    final confirm = await _showConfirmDialog(
+                                      context,
+                                      'Delete this chat?',
+                                    );
                                     if (confirm) {
                                       await FirebaseFirestore.instance
                                           .collection('chats')
@@ -161,9 +184,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                           .delete();
                                     }
                                     return confirm;
-                                  } else if (direction == DismissDirection.startToEnd) {
+                                  } else if (direction ==
+                                      DismissDirection.startToEnd) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('$contactName archived')),
+                                      SnackBar(
+                                        content: Text('$contactName archived'),
+                                      ),
                                     );
                                     return false;
                                   }
@@ -192,9 +218,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   ),
                                   title: Text(contactName),
                                   subtitle: Text(
-                                    lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
+                                    lastMsg.isNotEmpty
+                                        ? lastMsg
+                                        : 'Start a chat…',
                                     style: TextStyle(
-                                      fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
+                                      fontStyle: lastMsg.isEmpty
+                                          ? FontStyle.italic
+                                          : null,
                                     ),
                                   ),
                                   trailing: Text(timeStr),
@@ -219,45 +249,100 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 72.0, top: 8.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.remove_red_eye),
-                        label: const Text('View Status'),
+                      Expanded(
+                        child: Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: InkWell(
+                            onTap: () {},
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color.fromARGB(255, 38, 150, 255),
+                                    const Color.fromARGB(255, 30, 91, 244),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.remove_red_eye,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'View Status',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.history),
-                        label: const Text('My Status'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: InkWell(
+                            onTap: () {},
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color.fromARGB(255, 38, 150, 255),
+                                    const Color.fromARGB(255, 30, 91, 244),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.history, color: Colors.white),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'My Status',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
-        child: SpeedDial(
-          animatedIcon: AnimatedIcons.menu_close,
-          backgroundColor: Theme.of(context).primaryColor,
-          tooltip: 'Options',
-          children: [
-            SpeedDialChild(
-              child: const Icon(Icons.person_add),
-              label: 'Add Contact',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddContactScreen()),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
+  
 
-  Future<List<DocumentSnapshot>> _fetchFilteredChats(String currentUserId, String query) async {
+  Future<List<DocumentSnapshot>> _fetchFilteredChats(
+    String currentUserId,
+    String query,
+  ) async {
     final queryLower = query.toLowerCase();
     final chatSnap = await FirebaseFirestore.instance
         .collection('chats')
@@ -270,8 +355,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
     for (final doc in chatSnap.docs) {
       final data = doc.data();
       final users = List<String>.from(data['users'] ?? []);
-      final otherId = users.firstWhere((uid) => uid != currentUserId, orElse: () => '');
-      final contactNames = Map<String, dynamic>.from(data['contactNames'] ?? {});
+      final otherId = users.firstWhere(
+        (uid) => uid != currentUserId,
+        orElse: () => '',
+      );
+      final contactNames = Map<String, dynamic>.from(
+        data['contactNames'] ?? {},
+      );
       final name = contactNames[otherId]?.toString().toLowerCase() ?? '';
 
       final lastMessage = (data['lastMessage'] ?? '').toString().toLowerCase();
