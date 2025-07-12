@@ -8,11 +8,11 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.light,
     colorScheme: const ColorScheme.light(
-      primary: primaryColor,
-      secondary: Color(0xFF8E8E93),
+      primary: Color.fromARGB(255, 49, 130, 217),
+      secondary: Color.fromARGB(255, 112, 112, 118),
       surface: Colors.white,
       onSurface: Colors.black,
-      tertiary: Color(0xFF7CBEC2),
+      tertiary: Color.fromARGB(255, 49, 130, 217),
       onPrimary: Colors.black87,
     ),
     appBarTheme: const AppBarTheme(
@@ -27,7 +27,7 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: primaryColor.withAlpha(25),           // 10 % opacity
+      fillColor: Color.fromARGB(255, 147, 194, 244),           // 10 % opacity
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
@@ -39,7 +39,7 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: primaryColor),
+        borderSide: const BorderSide(color: Color.fromARGB(255, 49, 130, 217),),
       ),
       hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
     ),
@@ -57,7 +57,7 @@ class AppTheme {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
+        backgroundColor: Color.fromARGB(255, 49, 130, 217),
         foregroundColor: Colors.black87,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -71,18 +71,18 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: const ColorScheme.dark(
-      primary: primaryColor,
+      primary: Color.fromARGB(255, 49, 130, 217),
       secondary: Color(0xFFAAAAAA),
       surface: Color(0xFF121212),
       onSurface: Colors.white,
-      tertiary: Color(0xFF4EB7BA),
+      tertiary: Color.fromARGB(255, 49, 130, 217),
       onPrimary: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: Color(0xFF1F1F1F),
       elevation: 0,
       titleTextStyle: TextStyle(
-        color: Colors.white,
+        color: Color.fromARGB(255, 255, 255, 255),
         fontSize: 18,
         fontWeight: FontWeight.w600,
       ),
@@ -90,7 +90,7 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.grey[800],
+      fillColor: const Color.fromARGB(255, 144, 143, 143),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
@@ -102,7 +102,7 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: primaryColor),
+        borderSide: const BorderSide(color: Color.fromARGB(255, 49, 130, 217),),
       ),
       hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
     ),
@@ -113,14 +113,15 @@ class AppTheme {
     ),
     iconTheme: const IconThemeData(color: Colors.white, size: 24),
     textTheme: const TextTheme(
-      titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-      bodyLarge: TextStyle(fontSize: 16, color: Colors.white),
-      bodyMedium: TextStyle(fontSize: 14, color: Colors.white70),
-      labelMedium: TextStyle(fontSize: 12, color: Colors.white54),
+    titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+    bodyLarge: TextStyle(fontSize: 16, color: Colors.black),     // 👈 Chat text color override
+    bodyMedium: TextStyle(fontSize: 14, color: Colors.black),    // 👈 Chat text color override
+    labelMedium: TextStyle(fontSize: 12, color: Colors.white54),
     ),
+
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
+        backgroundColor: Color.fromARGB(255, 49, 130, 217),
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
