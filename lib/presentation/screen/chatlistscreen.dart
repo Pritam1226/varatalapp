@@ -7,7 +7,10 @@ import 'package:intl/intl.dart';
 import 'addcontact_screen.dart';
 import 'chatscreen.dart';
 import 'profile_screen.dart';
-import 'settings_screen.dart'; // ✅ Import the settings screen
+import 'settings_screen.dart';
+import 'package:varatalapp/presentation/screen/contact/contact_action_screen.dart';
+ // ✅ Make sure this is imported
+
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
@@ -38,12 +41,14 @@ class ChatListScreen extends StatelessWidget {
                 case 'settings':
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()), // ✅ Open settings
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   );
                   break;
                 case 'logout':
                   await FirebaseAuth.instance.signOut();
-                  if (context.mounted) Navigator.popUntil(context, (r) => r.isFirst);
+                  if (context.mounted) {
+                    Navigator.popUntil(context, (r) => r.isFirst);
+                  }
                   break;
               }
             },
@@ -114,13 +119,27 @@ class ChatListScreen extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('$contactName archived')),
                           );
-                          // Optional: set 'archived' flag in the chat document
-                          return false;
+                          return false; // Prevent actual dismissal
                         }
                         return false;
                       },
                       child: ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.person)),
+                        leading: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ContactActionScreen(
+                                  contactId: otherId,
+                                  contactName: contactName,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const CircleAvatar(
+                            child: Icon(Icons.person),
+                          ),
+                        ),
                         title: Text(contactName),
                         subtitle: Text(
                           lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
@@ -162,7 +181,6 @@ class ChatListScreen extends StatelessWidget {
     );
   }
 
-  /// Left swipe (Archive)
   Widget _buildSwipeActionLeft() {
     return Container(
       color: Colors.blue,
@@ -178,7 +196,6 @@ class ChatListScreen extends StatelessWidget {
     );
   }
 
-  /// Right swipe (Delete)
   Widget _buildSwipeActionRight() {
     return Container(
       color: Colors.red,
@@ -195,7 +212,6 @@ class ChatListScreen extends StatelessWidget {
     );
   }
 
-  /// Confirm delete dialog
   Future<bool> _showConfirmDialog(BuildContext context, String msg) async {
     return await showDialog<bool>(
           context: context,
