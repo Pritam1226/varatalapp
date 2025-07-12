@@ -9,7 +9,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     Key? key,
     required this.contactName,
-    required this.contactId,
+    required this.contactId, String? scrollToMessageId,
   }) : super(key: key);
 
   @override
