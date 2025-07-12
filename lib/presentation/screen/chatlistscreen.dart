@@ -247,12 +247,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 72.0, top: 8.0),
+                  padding: const EdgeInsets.only(bottom: 10.0, top: 8.0),
                   child: Row(
                     children: [
                       Expanded(
                         child: Card(
-                          elevation: 4,
+                          elevation: 2,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -294,7 +294,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Card(
-                          elevation: 4,
+                          elevation: 2,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
