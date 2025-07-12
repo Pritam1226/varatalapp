@@ -8,9 +8,7 @@ import 'addcontact_screen.dart';
 import 'chatscreen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
-import 'package:varatalapp/presentation/screen/contact/contact_action_screen.dart';
- // ✅ Make sure this is imported
-
+import 'package:varatalapp/presentation/screen/contact/contact_profile_popup.dart'; // ✅ Import the popup
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
@@ -95,9 +93,14 @@ class ChatListScreen extends StatelessWidget {
                     );
 
                     String contactName = 'Contact';
+                    String? profileImageUrl;
                     if (data.containsKey('contactNames')) {
                       final names = Map<String, dynamic>.from(data['contactNames']);
                       contactName = names[otherId] ?? contactName;
+                    }
+                    if (data.containsKey('contactProfileImages')) {
+                      final imgs = Map<String, dynamic>.from(data['contactProfileImages']);
+                      profileImageUrl = imgs[otherId];
                     }
 
                     final lastMsg = data['lastMessage'] ?? '';
@@ -119,25 +122,26 @@ class ChatListScreen extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('$contactName archived')),
                           );
-                          return false; // Prevent actual dismissal
+                          return false;
                         }
                         return false;
                       },
                       child: ListTile(
                         leading: GestureDetector(
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ContactActionScreen(
-                                  contactId: otherId,
-                                  contactName: contactName,
-                                ),
+                            showDialog(
+                              context: context,
+                              builder: (_) => ContactProfilePopup(
+                                contactId: otherId,
+                                contactName: contactName,
+                                profileImageUrl: profileImageUrl,
                               ),
                             );
                           },
-                          child: const CircleAvatar(
-                            child: Icon(Icons.person),
+                          child: CircleAvatar(
+                            backgroundImage:
+                                profileImageUrl != null ? NetworkImage(profileImageUrl) : null,
+                            child: profileImageUrl == null ? const Icon(Icons.person) : null,
                           ),
                         ),
                         title: Text(contactName),
