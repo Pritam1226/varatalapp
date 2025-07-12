@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:varatalapp/controller/theme_controller.dart'; // ✅ Your theme controller
+import 'package:varatalapp/controller/theme_controller.dart';
+import 'blockedchats_screen.dart'; // 👈 Add this import
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -19,7 +20,20 @@ class SettingsScreen extends StatelessWidget {
             onChanged: (value) => themeController.toggleTheme(value),
             secondary: const Icon(Icons.dark_mode),
           ),
-          // You can add more settings options here
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.block),
+            title: const Text('Blocked Chats'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BlockedChatsScreen(),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
