@@ -23,23 +23,27 @@ class ProfileDetailScreen extends StatelessWidget {
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
+          final String name = data['name'] ?? 'N/A';
+          final String bio = data['bio'] ?? 'No bio';
+          final String? profileImageUrl = data['profileImageUrl'];
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 CircleAvatar(
                   radius: 50,
-                  backgroundImage: data['profileImageUrl'] != ''
-                      ? NetworkImage(data['profileImageUrl'])
+                  backgroundImage: (profileImageUrl != null && profileImageUrl.isNotEmpty)
+                      ? NetworkImage(profileImageUrl)
                       : null,
-                  child: data['profileImageUrl'] == ''
+                  child: (profileImageUrl == null || profileImageUrl.isEmpty)
                       ? const Icon(Icons.person, size: 50)
                       : null,
                 ),
                 const SizedBox(height: 16),
-                Text(data['name'] ?? 'N/A', style: const TextStyle(fontSize: 20)),
+                Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(data['bio'] ?? 'No bio'),
+                Text(bio, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
               ],
             ),
           );
