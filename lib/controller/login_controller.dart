@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:varatalapp/services/presence_service.dart'; // ✅ Make sure this path is correct
 
 class LoginController {
   final emailController = TextEditingController();
@@ -42,10 +44,18 @@ class LoginController {
         email: email,
         password: password,
       );
-      return null; // Success
+
+      // ✅ Set user online and start tracking
+      PresenceService().start();
+
+      return null; // success
     } catch (e) {
-      return e.toString(); // Error message
+      return e.toString(); // show error
     }
   }
-}
 
+  Future<void> logoutUser() async {
+    PresenceService().stop(); // ✅ mark offline
+    await FirebaseAuth.instance.signOut();
+  }
+}
