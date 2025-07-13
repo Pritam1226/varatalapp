@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'chat_widgets/voice_recorder.dart';
 
 class ChatScreen extends StatefulWidget {
   final String contactName;
@@ -70,6 +71,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final msgData = {
       'senderId': senderId,
       'text': text,
+      'type': 'text',
       'timestamp': timestamp,
     };
 
@@ -111,6 +113,48 @@ class _ChatScreenState extends State<ChatScreen> {
         curve: Curves.easeOut,
       );
     }
+  }
+
+  Future<void> _sendVoiceMessage(String url, double duration) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final senderId = currentUser.uid;
+    final receiverId = widget.contactId;
+    final chatId = _chatId(senderId, receiverId);
+    final timestamp = FieldValue.serverTimestamp();
+
+    final senderSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(senderId)
+        .get();
+    final receiverSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(receiverId)
+        .get();
+
+    final currentUserName = senderSnapshot.data()?['name'] ?? 'Unknown';
+    final receiverName = receiverSnapshot.data()?['name'] ?? 'Contact';
+
+    final messageData = {
+      'type': 'audio',
+      'audioUrl': url,
+      'duration': duration,
+      'senderId': senderId,
+      'timestamp': timestamp,
+    };
+
+    final chatRef = FirebaseFirestore.instance.collection('chats').doc(chatId);
+    await chatRef.collection('messages').add(messageData);
+    await chatRef.set({
+      'users': [senderId, receiverId],
+      'lastMessage': '[Voice]',
+      'lastMessageTime': timestamp,
+      'contactNames': {
+        senderId: currentUserName,
+        receiverId: receiverName,
+      },
+    }, SetOptions(merge: true));
   }
 
   void _handleMenuAction(String value) async {
@@ -276,7 +320,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? allDocs
                       : allDocs
                           .where((doc) {
-                            final text = (doc.data() as Map<String, dynamic>)['text'] ?? '';
+                            final data = doc.data() as Map<String, dynamic>;
+                            final text = data['text'] ?? '';
                             return text.toLowerCase().contains(_searchQuery.toLowerCase());
                           })
                           .toList();
@@ -298,13 +343,53 @@ class _ChatScreenState extends State<ChatScreen> {
                               .format(context)
                           : '';
 
+                      Widget content;
+                      if (m['type'] == 'audio') {
+                        content = Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.play_arrow),
+                                const SizedBox(width: 8),
+                                Text('${m['duration'].toStringAsFixed(1)} sec'),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              timeStr,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        );
+                      } else {
+                        content = Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(m['text'] ?? '', style: const TextStyle(fontSize: 16)),
+                            const SizedBox(height: 4),
+                            Text(
+                              timeStr,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
                       return GestureDetector(
                         onLongPress: () {
                           showDialog(
                             context: context,
                             builder: (_) => AlertDialog(
                               title: const Text('Pin Message?'),
-                              content: Text(m['text'] ?? ''),
+                              content: Text(m['text'] ?? '[Audio Message]'),
                               actions: [
                                 TextButton(
                                   onPressed: () {
@@ -332,19 +417,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               color: isMe ? Colors.blue[200] : Colors.grey[300],
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(m['text'] ?? '',
-                                    style: const TextStyle(fontSize: 16)),
-                                const SizedBox(height: 4),
-                                Text(
-                                  timeStr,
-                                  style: TextStyle(
-                                      fontSize: 10, color: Colors.grey[700]),
-                                ),
-                              ],
-                            ),
+                            child: content,
                           ),
                         ),
                       );
@@ -386,10 +459,15 @@ class _ChatScreenState extends State<ChatScreen> {
                           setState(() => _isTyping = val.trim().isNotEmpty),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: _isBlocked ? null : _sendMessage,
-                  ),
+                  if (_isTyping)
+                    IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: _isBlocked ? null : _sendMessage,
+                    )
+                  else
+                    VoiceRecorder(
+                      onSend: _isBlocked ? (_, __) {} : _sendVoiceMessage,
+                    ),
                 ],
               ),
             ),

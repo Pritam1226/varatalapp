@@ -337,7 +337,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
     );
   }
-  
 
   Future<List<DocumentSnapshot>> _fetchFilteredChats(
     String currentUserId,
