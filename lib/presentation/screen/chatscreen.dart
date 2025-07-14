@@ -5,7 +5,6 @@ import 'chat_widgets/voice_recorder.dart';
 import 'contact/contact_profile_popup.dart';
 // import 'ProfileView.dart';
 
-
 class ChatScreen extends StatefulWidget {
   final String contactName;
   final String contactId;
@@ -31,7 +30,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _wallpaperUrl;
 
   bool _isSearching = false; // 🔄 Added
-  String _searchQuery = '';  // 🔄 Added
+  String _searchQuery = ''; // 🔄 Added
 
   String _chatId(String uid1, String uid2) =>
       (uid1.compareTo(uid2) < 0) ? '${uid1}_$uid2' : '${uid2}_$uid1';
@@ -159,24 +158,17 @@ class _ChatScreenState extends State<ChatScreen> {
   void _handleMenuAction(String value) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     final chatId = _chatId(currentUser!.uid, widget.contactId);
-    final chatDoc =
-        FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
 
     switch (value) {
       case 'view':
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: Text('Contact Info'),
-            content: Text(
-              'Name: ${widget.contactName}\nUID: ${widget.contactId}',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ContactProfilePopup(
+              contactName: widget.contactName,
+              contactId: widget.contactId,
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Close"),
-              ),
-            ],
           ),
         );
         break;
