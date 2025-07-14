@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'chat_widgets/voice_recorder.dart';
+import 'contact/contact_profile_popup.dart';
+// import 'ProfileView.dart';
+
 
 class ChatScreen extends StatefulWidget {
   final String contactName;
@@ -28,7 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _wallpaperUrl;
 
   bool _isSearching = false; // 🔄 Added
-  String _searchQuery = ''; // 🔄 Added
+  String _searchQuery = '';  // 🔄 Added
 
   String _chatId(String uid1, String uid2) =>
       (uid1.compareTo(uid2) < 0) ? '${uid1}_$uid2' : '${uid2}_$uid1';
@@ -156,7 +159,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _handleMenuAction(String value) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     final chatId = _chatId(currentUser!.uid, widget.contactId);
-    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final chatDoc =
+        FirebaseFirestore.instance.collection('chats').doc(chatId);
 
     switch (value) {
       case 'view':
@@ -230,7 +234,45 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: !_isSearching
-            ? Text(widget.contactName)
+            ? Row(
+                children: [
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ContactProfilePopup(
+                            contactName: widget.contactName,
+                            contactId: widget.contactId,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(50),
+                    child: CircleAvatar(
+                      radius:
+                          20, // Made it slightly larger for better visibility
+                      backgroundColor: Colors.grey.shade300,
+                      child: const Icon(
+                        Icons.person,
+                        size: 22,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.contactName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              )
             : TextField(
                 autofocus: true,
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -240,6 +282,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 style: const TextStyle(color: Colors.white),
               ),
+
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
