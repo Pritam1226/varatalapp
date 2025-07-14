@@ -2,8 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'chat_widgets/voice_recorder.dart';
-import 'contact/contact_profile_popup.dart';
-// import 'ProfileView.dart';
+import 'contact/profile_detail_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String contactName;
@@ -13,7 +12,6 @@ class ChatScreen extends StatefulWidget {
     Key? key,
     required this.contactName,
     required this.contactId,
-    String? scrollToMessageId,
   }) : super(key: key);
 
   @override
@@ -28,9 +26,8 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isBlocked = false;
   Map<String, dynamic>? _pinnedMessage;
   String? _wallpaperUrl;
-
-  bool _isSearching = false; // 🔄 Added
-  String _searchQuery = ''; // 🔄 Added
+  bool _isSearching = false;
+  String _searchQuery = '';
 
   String _chatId(String uid1, String uid2) =>
       (uid1.compareTo(uid2) < 0) ? '${uid1}_$uid2' : '${uid2}_$uid1';
@@ -88,12 +85,11 @@ class _ChatScreenState extends State<ChatScreen> {
         .collection('users')
         .doc(senderId)
         .get();
-    final currentUserName = senderSnapshot.data()?['name'] ?? 'Unknown';
-
     final receiverSnapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(receiverId)
         .get();
+    final currentUserName = senderSnapshot.data()?['name'] ?? 'Unknown';
     final receiverName = receiverSnapshot.data()?['name'] ?? 'Contact';
 
     await chatDoc.set({
@@ -133,7 +129,6 @@ class _ChatScreenState extends State<ChatScreen> {
         .collection('users')
         .doc(receiverId)
         .get();
-
     final currentUserName = senderSnapshot.data()?['name'] ?? 'Unknown';
     final receiverName = receiverSnapshot.data()?['name'] ?? 'Contact';
 
@@ -165,35 +160,28 @@ class _ChatScreenState extends State<ChatScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ContactProfilePopup(
-              contactName: widget.contactName,
-              contactId: widget.contactId,
-            ),
+            builder: (_) => ProfileDetailScreen(contactId: widget.contactId),
           ),
         );
         break;
-
       case 'unpin':
         await chatDoc.set({
           'pinnedMessage': FieldValue.delete(),
         }, SetOptions(merge: true));
         setState(() => _pinnedMessage = null);
         break;
-
       case 'block':
         await chatDoc.set({
           'blockedBy': FieldValue.arrayUnion([currentUser.uid]),
         }, SetOptions(merge: true));
         setState(() => _isBlocked = true);
         break;
-
       case 'unblock':
         await chatDoc.set({
           'blockedBy': FieldValue.arrayRemove([currentUser.uid]),
         }, SetOptions(merge: true));
         setState(() => _isBlocked = false);
         break;
-
       case 'wallpaper':
         final randomUrl = 'https://source.unsplash.com/random/800x600';
         await chatDoc.set({'wallpaperUrl': randomUrl}, SetOptions(merge: true));
@@ -206,7 +194,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     final chatId = _chatId(currentUser!.uid, widget.contactId);
     final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
-
     await chatDoc.set({'pinnedMessage': message}, SetOptions(merge: true));
     setState(() => _pinnedMessage = message);
   }
@@ -233,23 +220,15 @@ class _ChatScreenState extends State<ChatScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ContactProfilePopup(
-                            contactName: widget.contactName,
-                            contactId: widget.contactId,
-                          ),
+                          builder: (_) =>
+                              ProfileDetailScreen(contactId: widget.contactId),
                         ),
                       );
                     },
-                    borderRadius: BorderRadius.circular(50),
-                    child: CircleAvatar(
-                      radius:
-                          20, // Made it slightly larger for better visibility
-                      backgroundColor: Colors.grey.shade300,
-                      child: const Icon(
-                        Icons.person,
-                        size: 22,
-                        color: Colors.white,
-                      ),
+                    child: const CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.grey,
+                      child: Icon(Icons.person, color: Colors.white),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -257,7 +236,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Text(
                       widget.contactName,
                       style: const TextStyle(
-                        fontSize: 16,
                         fontWeight: FontWeight.w500,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -274,20 +252,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 style: const TextStyle(color: Colors.white),
               ),
-
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _isSearching = false;
-                  _searchQuery = '';
-                } else {
-                  _isSearching = true;
-                }
-              });
-            },
+            onPressed: () => setState(() {
+              _isSearching = !_isSearching;
+              if (!_isSearching) _searchQuery = '';
+            }),
           ),
           PopupMenuButton<String>(
             onSelected: _handleMenuAction,
@@ -351,7 +322,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-
                   if (snap.hasError) {
                     return const Center(child: Text('Error loading messages'));
                   }
@@ -399,13 +369,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              timeStr,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[700],
-                              ),
-                            ),
+                            Text(timeStr, style: const TextStyle(fontSize: 10)),
                           ],
                         );
                       } else {
@@ -417,13 +381,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               style: const TextStyle(fontSize: 16),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              timeStr,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[700],
-                              ),
-                            ),
+                            Text(timeStr, style: const TextStyle(fontSize: 10)),
                           ],
                         );
                       }

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:varatalapp/presentation/screen/addcontact_screen.dart';
+import 'package:varatalapp/presentation/screen/contact/profile_detail_screen.dart';
 import 'chatscreen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
-import 'package:varatalapp/presentation/screen/contact/contact_profile_popup.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -153,13 +153,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
                               return ListTile(
                                 leading: GestureDetector(
-                                  onTap: () => _showQuickMenu(
-                                    ctx: context,
-                                    chatId: doc.id,
-                                    contactId: otherId,
-                                    contactName: contactName,
-                                    profileImg: profileImageUrl,
-                                  ),
+                                  onTap: () => _showQuickOptions(context, doc.id, contactName, otherId, profileImageUrl),
                                   child: Stack(
                                     children: [
                                       CircleAvatar(
@@ -171,10 +165,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         bottom: 0,
                                         right: 0,
                                         child: StreamBuilder<DocumentSnapshot>(
-                                          stream: FirebaseFirestore.instance
-                                              .collection('users')
-                                              .doc(otherId)
-                                              .snapshots(),
+                                          stream: FirebaseFirestore.instance.collection('users').doc(otherId).snapshots(),
                                           builder: (context, snap) {
                                             bool isOnline = false;
                                             if (snap.hasData && snap.data!.data() != null) {
@@ -199,9 +190,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 title: Text(contactName),
                                 subtitle: Text(
                                   lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
-                                  style: TextStyle(
-                                    fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
-                                  ),
+                                  style: TextStyle(fontStyle: lastMsg.isEmpty ? FontStyle.italic : null),
                                 ),
                                 trailing: Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -315,19 +304,54 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  void _showQuickMenu({
-    required BuildContext ctx,
-    required String chatId,
-    required String contactId,
-    required String contactName,
-    required String? profileImg,
-  }) {
-    showDialog(
-      context: ctx,
-      builder: (_) => ContactProfilePopup(
-        contactId: contactId,
-        contactName: contactName,
-        profileImageUrl: profileImg,
+  void _showQuickOptions(BuildContext context, String chatId, String contactName, String contactId, String? profileImg) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => ChatScreen(contactName: contactName, contactId: contactId),
+                ));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('View Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => ProfileDetailScreen(contactId: contactId),
+                ));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.volume_off),
+              title: const Text('Mute'),
+              onTap: () async {
+                Navigator.pop(context);
+                final doc = FirebaseFirestore.instance.collection('chats').doc(chatId);
+                await doc.update({
+                  'mutedBy': FieldValue.arrayUnion([FirebaseAuth.instance.currentUser!.uid]),
+                });
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Chat', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                Navigator.pop(context);
+                await FirebaseFirestore.instance.collection('chats').doc(chatId).delete();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
