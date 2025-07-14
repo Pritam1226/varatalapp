@@ -10,7 +10,8 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({
     Key? key,
     required this.contactName,
-    required this.contactId, String? scrollToMessageId,
+    required this.contactId,
+    String? scrollToMessageId,
   }) : super(key: key);
 
   @override
@@ -27,7 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _wallpaperUrl;
 
   bool _isSearching = false; // 🔄 Added
-  String _searchQuery = '';  // 🔄 Added
+  String _searchQuery = ''; // 🔄 Added
 
   String _chatId(String uid1, String uid2) =>
       (uid1.compareTo(uid2) < 0) ? '${uid1}_$uid2' : '${uid2}_$uid1';
@@ -43,8 +44,10 @@ class _ChatScreenState extends State<ChatScreen> {
     if (currentUser == null) return;
 
     final chatId = _chatId(currentUser.uid, widget.contactId);
-    final chatDoc =
-        await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+    final chatDoc = await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId)
+        .get();
 
     final data = chatDoc.data();
     if (data != null) {
@@ -75,8 +78,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'timestamp': timestamp,
     };
 
-    final chatDoc =
-        FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
 
     await chatDoc.collection('messages').add(msgData);
 
@@ -96,10 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'users': [senderId, receiverId],
       'lastMessage': text,
       'lastMessageTime': timestamp,
-      'contactNames': {
-        senderId: currentUserName,
-        receiverId: receiverName,
-      },
+      'contactNames': {senderId: currentUserName, receiverId: receiverName},
     }, SetOptions(merge: true));
 
     _messageController.clear();
@@ -150,18 +149,14 @@ class _ChatScreenState extends State<ChatScreen> {
       'users': [senderId, receiverId],
       'lastMessage': '[Voice]',
       'lastMessageTime': timestamp,
-      'contactNames': {
-        senderId: currentUserName,
-        receiverId: receiverName,
-      },
+      'contactNames': {senderId: currentUserName, receiverId: receiverName},
     }, SetOptions(merge: true));
   }
 
   void _handleMenuAction(String value) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     final chatId = _chatId(currentUser!.uid, widget.contactId);
-    final chatDoc =
-        FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
 
     switch (value) {
       case 'view':
@@ -169,30 +164,36 @@ class _ChatScreenState extends State<ChatScreen> {
           context: context,
           builder: (_) => AlertDialog(
             title: Text('Contact Info'),
-            content: Text('Name: ${widget.contactName}\nUID: ${widget.contactId}'),
+            content: Text(
+              'Name: ${widget.contactName}\nUID: ${widget.contactId}',
+            ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context), child: const Text("Close"))
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Close"),
+              ),
             ],
           ),
         );
         break;
 
       case 'unpin':
-        await chatDoc.set({'pinnedMessage': FieldValue.delete()}, SetOptions(merge: true));
+        await chatDoc.set({
+          'pinnedMessage': FieldValue.delete(),
+        }, SetOptions(merge: true));
         setState(() => _pinnedMessage = null);
         break;
 
       case 'block':
         await chatDoc.set({
-          'blockedBy': FieldValue.arrayUnion([currentUser.uid])
+          'blockedBy': FieldValue.arrayUnion([currentUser.uid]),
         }, SetOptions(merge: true));
         setState(() => _isBlocked = true);
         break;
 
       case 'unblock':
         await chatDoc.set({
-          'blockedBy': FieldValue.arrayRemove([currentUser.uid])
+          'blockedBy': FieldValue.arrayRemove([currentUser.uid]),
         }, SetOptions(merge: true));
         setState(() => _isBlocked = false);
         break;
@@ -208,8 +209,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _pinMessage(Map<String, dynamic> message) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     final chatId = _chatId(currentUser!.uid, widget.contactId);
-    final chatDoc =
-        FirebaseFirestore.instance.collection('chats').doc(chatId);
+    final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
 
     await chatDoc.set({'pinnedMessage': message}, SetOptions(merge: true));
     setState(() => _pinnedMessage = message);
@@ -259,14 +259,20 @@ class _ChatScreenState extends State<ChatScreen> {
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'view', child: Text('View Contact')),
               if (_pinnedMessage != null)
-                const PopupMenuItem(value: 'unpin', child: Text('Unpin Message')),
+                const PopupMenuItem(
+                  value: 'unpin',
+                  child: Text('Unpin Message'),
+                ),
               PopupMenuItem(
                 value: _isBlocked ? 'unblock' : 'block',
                 child: Text(_isBlocked ? 'Unblock Contact' : 'Block Contact'),
               ),
-              const PopupMenuItem(value: 'wallpaper', child: Text('Change Wallpaper')),
+              const PopupMenuItem(
+                value: 'wallpaper',
+                child: Text('Change Wallpaper'),
+              ),
             ],
-          )
+          ),
         ],
       ),
       body: Container(
@@ -318,13 +324,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   final allDocs = snap.data?.docs ?? [];
                   final docs = _searchQuery.isEmpty
                       ? allDocs
-                      : allDocs
-                          .where((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            final text = data['text'] ?? '';
-                            return text.toLowerCase().contains(_searchQuery.toLowerCase());
-                          })
-                          .toList();
+                      : allDocs.where((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final text = data['text'] ?? '';
+                          return text.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          );
+                        }).toList();
 
                   if (docs.isEmpty) {
                     return const Center(child: Text('No messages found.'));
@@ -339,8 +345,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       final isMe = m['senderId'] == currentUid;
                       final timestamp = m['timestamp'];
                       final timeStr = (timestamp is Timestamp)
-                          ? TimeOfDay.fromDateTime(timestamp.toDate())
-                              .format(context)
+                          ? TimeOfDay.fromDateTime(
+                              timestamp.toDate(),
+                            ).format(context)
                           : '';
 
                       Widget content;
@@ -370,7 +377,10 @@ class _ChatScreenState extends State<ChatScreen> {
                         content = Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(m['text'] ?? '', style: const TextStyle(fontSize: 16)),
+                            Text(
+                              m['text'] ?? '',
+                              style: const TextStyle(fontSize: 16),
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               timeStr,
@@ -407,11 +417,14 @@ class _ChatScreenState extends State<ChatScreen> {
                           );
                         },
                         child: Align(
-                          alignment:
-                              isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          alignment: isMe
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
                           child: Container(
                             margin: const EdgeInsets.symmetric(
-                                vertical: 4, horizontal: 10),
+                              vertical: 4,
+                              horizontal: 10,
+                            ),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: isMe ? Colors.blue[200] : Colors.grey[300],
@@ -431,9 +444,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: EdgeInsets.only(left: 16.0, bottom: 4),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text("typing...",
-                      style: TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.grey)),
+                  child: Text(
+                    "typing...",
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ),
             const Divider(height: 1),
