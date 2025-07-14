@@ -1,7 +1,9 @@
+// ... imports (unchanged)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:varatalapp/presentation/screen/addcontact_screen.dart';
 
 import 'chatscreen.dart';
 import 'profile_screen.dart';
@@ -47,6 +49,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   );
                   break;
+                case 'add_contact':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddContactScreen()),
+                  );
+                  break;
                 case 'logout':
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
@@ -59,6 +67,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               PopupMenuItem(value: 'profile', child: Text('Profile')),
               PopupMenuItem(value: 'new_group', child: Text('New Group')),
               PopupMenuItem(value: 'settings', child: Text('Settings')),
+              PopupMenuItem(value: 'add_contact', child: Text('Add Contact')),
               PopupMenuItem(value: 'logout', child: Text('Logout')),
             ],
           ),
@@ -68,7 +77,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ? const Center(child: Text('User not logged in'))
           : Column(
               children: [
-                // ─── SEARCH BAR ─────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
@@ -96,30 +104,43 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                   ),
                 ),
-                // ─── CHAT LIST ──────────────────────────────────────────────
                 Expanded(
                   child: ValueListenableBuilder<String>(
                     valueListenable: _searchQuery,
                     builder: (context, query, _) {
-                      return FutureBuilder<List<DocumentSnapshot>>(
-                        future: _fetchFilteredChats(currentUserId, query),
+                      return StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('chats')
+                            .where('users', arrayContains: currentUserId)
+                            .orderBy('lastMessageTime', descending: true)
+                            .snapshots(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator());
                           }
                           if (snapshot.hasError) {
                             return Center(child: Text('Error: ${snapshot.error}'));
                           }
-                          final docs = snapshot.data ?? [];
+                          var docs = snapshot.data?.docs ?? [];
+
+                          if (query.isNotEmpty) {
+                            docs = docs.where((d) {
+                              final data = d.data() as Map<String, dynamic>;
+                              final users = List<String>.from(data['users'] ?? []);
+                              final otherId = users.firstWhere((u) => u != currentUserId, orElse: () => '');
+                              final contactNames = Map<String, dynamic>.from(data['contactNames'] ?? {});
+                              final name = (contactNames[otherId] ?? '').toString().toLowerCase();
+                              final lastMsg = (data['lastMessage'] ?? '').toString().toLowerCase();
+                              return name.contains(query) || lastMsg.contains(query);
+                            }).toList();
+                          }
+
                           if (docs.isEmpty) {
                             return const Center(
-                              child: Text(
-                                'No results found',
-                                style: TextStyle(fontSize: 16, color: Colors.grey),
-                              ),
+                              child: Text('No results found', style: TextStyle(fontSize: 16, color: Colors.grey)),
                             );
                           }
+
                           return ListView.builder(
                             itemCount: docs.length,
                             itemBuilder: (context, idx) {
@@ -127,22 +148,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               final chatId = doc.id;
                               final data = doc.data() as Map<String, dynamic>;
                               final users = List<String>.from(data['users'] ?? []);
-                              final otherId =
-                                  users.firstWhere((u) => u != currentUserId, orElse: () => '');
+                              final otherId = users.firstWhere((u) => u != currentUserId, orElse: () => '');
 
-                              // name & avatar
                               String contactName = 'Contact';
                               String? profileImageUrl;
-                              if (data.containsKey('contactNames')) {
-                                final names = Map<String, dynamic>.from(data['contactNames']);
-                                contactName = names[otherId] ?? contactName;
-                              }
-                              if (data.containsKey('contactProfileImages')) {
-                                final imgs = Map<String, dynamic>.from(data['contactProfileImages']);
-                                profileImageUrl = imgs[otherId];
-                              }
+                              final names = Map<String, dynamic>.from(data['contactNames'] ?? {});
+                              contactName = names[otherId] ?? contactName;
+                              final imgs = Map<String, dynamic>.from(data['contactProfileImages'] ?? {});
+                              profileImageUrl = imgs[otherId];
 
-                              // last message & time
                               final lastMsg = data['lastMessage'] ?? '';
                               final time = data['lastMessageTime'] as Timestamp?;
                               final timeStr = time != null ? formatTime(time) : '';
@@ -155,22 +169,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   if (direction == DismissDirection.endToStart) {
                                     final confirm = await _showConfirmDialog(context, 'Delete this chat?');
                                     if (confirm) {
-                                      await FirebaseFirestore.instance
-                                          .collection('chats')
-                                          .doc(chatId)
-                                          .delete();
+                                      await FirebaseFirestore.instance.collection('chats').doc(chatId).delete();
                                     }
                                     return confirm;
                                   } else if (direction == DismissDirection.startToEnd) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('$contactName archived')),
                                     );
-                                    return false; // archive is only visual here
+                                    return false;
                                   }
                                   return false;
                                 },
                                 child: ListTile(
-                                  // ─── AVATAR WITH ONLINE DOT ────────────
                                   leading: GestureDetector(
                                     onTap: () {
                                       showDialog(
@@ -186,21 +196,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       children: [
                                         CircleAvatar(
                                           radius: 25,
-                                          backgroundImage: profileImageUrl != null
-                                              ? NetworkImage(profileImageUrl)
-                                              : null,
-                                          child: profileImageUrl == null
-                                              ? const Icon(Icons.person)
-                                              : null,
+                                          backgroundImage: profileImageUrl != null ? NetworkImage(profileImageUrl) : null,
+                                          child: profileImageUrl == null ? const Icon(Icons.person) : null,
                                         ),
                                         Positioned(
                                           bottom: 0,
                                           right: 0,
                                           child: StreamBuilder<DocumentSnapshot>(
-                                            stream: FirebaseFirestore.instance
-                                                .collection('users')
-                                                .doc(otherId)
-                                                .snapshots(),
+                                            stream: FirebaseFirestore.instance.collection('users').doc(otherId).snapshots(),
                                             builder: (context, snap) {
                                               bool isOnline = false;
                                               if (snap.hasData && snap.data!.data() != null) {
@@ -222,7 +225,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       ],
                                     ),
                                   ),
-                                  // ─── NAME, LAST MSG, TIME ──────────────
                                   title: Text(contactName),
                                   subtitle: Text(
                                     lastMsg.isNotEmpty ? lastMsg : 'Start a chat…',
@@ -230,13 +232,40 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       fontStyle: lastMsg.isEmpty ? FontStyle.italic : null,
                                     ),
                                   ),
-                                  trailing: Text(timeStr),
-                                  // ─── TAP TO OPEN CHAT ───────────────────
+                                  trailing: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        timeStr,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      if ((data['unreadCounts']?[currentUserId] ?? 0) > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            '${data['unreadCounts'][currentUserId]}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          ChatScreen(contactName: contactName, contactId: otherId),
+                                      builder: (_) => ChatScreen(
+                                        contactName: contactName,
+                                        contactId: otherId,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -248,14 +277,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     },
                   ),
                 ),
-                // ─── STATUS SHORTCUTS (UNCHANGED) ──────────────────────────
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10.0, top: 8.0),
                   child: Row(
                     children: [
-                      Expanded(child: _statusButton('View Status', Icons.remove_red_eye)),
+                      Expanded(
+                        child: _statusButton(
+                          'View Status',
+                          Icons.remove_red_eye,
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Expanded(child: _statusButton('My Status', Icons.history)),
+                      Expanded(
+                        child: _statusButton('My Status', Icons.history),
+                      ),
                     ],
                   ),
                 ),
@@ -264,80 +299,32 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // HELPERS
-  // ────────────────────────────────────────────────────────────────────────────
-
-  Future<List<DocumentSnapshot>> _fetchFilteredChats(
-    String currentUserId,
-    String query,
-  ) async {
-    final queryLower = query.toLowerCase();
-    final chatSnap = await FirebaseFirestore.instance
-        .collection('chats')
-        .where('users', arrayContains: currentUserId)
-        .orderBy('lastMessageTime', descending: true)
-        .get();
-
-    final matched = <DocumentSnapshot>[];
-
-    for (final doc in chatSnap.docs) {
-      final data = doc.data();
-      final users = List<String>.from(data['users'] ?? []);
-      final otherId = users.firstWhere((u) => u != currentUserId, orElse: () => '');
-      final contactNames = Map<String, dynamic>.from(data['contactNames'] ?? {});
-      final name = contactNames[otherId]?.toString().toLowerCase() ?? '';
-      final lastMessage = (data['lastMessage'] ?? '').toString().toLowerCase();
-
-      if (name.contains(queryLower) || lastMessage.contains(queryLower)) {
-        matched.add(doc);
-        continue;
-      }
-
-      // deep search inside messages
-      final msgSnap = await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(doc.id)
-          .collection('messages')
-          .orderBy('timestamp', descending: true)
-          .get();
-
-      final hasMatch = msgSnap.docs.any((m) {
-        final text = (m['text'] ?? '').toString().toLowerCase();
-        return text.contains(queryLower);
-      });
-
-      if (hasMatch) matched.add(doc);
-    }
-    return matched;
-  }
-
   Widget _buildSwipeActionLeft() => Container(
-        color: Colors.blue,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        alignment: Alignment.centerLeft,
-        child: const Row(
-          children: [
-            Icon(Icons.archive, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Archive', style: TextStyle(color: Colors.white)),
-          ],
-        ),
-      );
+    color: Colors.blue,
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    alignment: Alignment.centerLeft,
+    child: const Row(
+      children: [
+        Icon(Icons.archive, color: Colors.white),
+        SizedBox(width: 8),
+        Text('Archive', style: TextStyle(color: Colors.white)),
+      ],
+    ),
+  );
 
   Widget _buildSwipeActionRight() => Container(
-        color: Colors.red,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        alignment: Alignment.centerRight,
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Icon(Icons.delete, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Delete', style: TextStyle(color: Colors.white)),
-          ],
-        ),
-      );
+    color: Colors.red,
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    alignment: Alignment.centerRight,
+    child: const Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Icon(Icons.delete, color: Colors.white),
+        SizedBox(width: 8),
+        Text('Delete', style: TextStyle(color: Colors.white)),
+      ],
+    ),
+  );
 
   Future<bool> _showConfirmDialog(BuildContext context, String msg) async {
     return await showDialog<bool>(
@@ -360,7 +347,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
         false;
   }
 
-  // small helper for status shortcut cards
   Widget _statusButton(String label, IconData icon) {
     return Card(
       elevation: 2,
@@ -386,7 +372,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
               const SizedBox(height: 4),
               Text(
                 label,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
