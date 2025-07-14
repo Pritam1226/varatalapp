@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart'; // Share package
+
 import 'package:varatalapp/controller/theme_controller.dart';
 import 'package:varatalapp/presentation/screen/blockedchats_screen.dart';
 import 'package:varatalapp/presentation/screen/chattheme_screen.dart';
@@ -15,10 +16,14 @@ class SettingsScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        centerTitle: true,
+      ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
+          // Section: Appearance
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: Text(
@@ -36,7 +41,6 @@ class SettingsScreen extends StatelessWidget {
             onChanged: (value) => themeController.toggleTheme(value),
             secondary: const Icon(Icons.dark_mode),
           ),
-
           ListTile(
             leading: const Icon(Icons.format_paint),
             title: const Text('Chat Theme'),
@@ -48,7 +52,6 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-
           ListTile(
             leading: const Icon(Icons.wallpaper),
             title: const Text('Chat Wallpaper'),
@@ -63,6 +66,7 @@ class SettingsScreen extends StatelessWidget {
 
           const Divider(),
 
+          // Section: Chats & Privacy
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: Text(
@@ -74,7 +78,6 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Chat History'),
@@ -86,7 +89,6 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-
           ListTile(
             leading: const Icon(Icons.block),
             title: const Text('Blocked Chats'),
@@ -96,6 +98,24 @@ class SettingsScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (context) => const BlockedChatsScreen()),
               );
+            },
+          ),
+
+          // ✅ Invite a Friend Feature
+          ListTile(
+            leading: const Icon(Icons.person_add_alt_1),
+            title: const Text('Invite a Friend'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              final String inviteMessage = '''
+👋 Hey! Join me on Vartalap Chat App! 🗨️
+
+Experience secure and smooth chatting with friends and family!
+
+📲 Download now:
+https://vartalap.com/download
+'''; 
+              
             },
           ),
         ],
