@@ -161,6 +161,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               final time = data['lastMessageTime'] as Timestamp?;
                               final timeStr = time != null ? formatTime(time) : '';
 
+                              final isMuted = List<String>.from(data['mutedBy'] ?? []).contains(currentUserId);
+
                               return Dismissible(
                                 key: Key(chatId),
                                 background: _buildSwipeActionLeft(),
@@ -182,16 +184,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 },
                                 child: ListTile(
                                   leading: GestureDetector(
-                                    onTap: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (_) => ContactProfilePopup(
-                                          contactId: otherId,
-                                          contactName: contactName,
-                                          profileImageUrl: profileImageUrl,
-                                        ),
-                                      );
-                                    },
+                                    onTap: () => _showQuickMenu(
+                                      ctx: context,
+                                      chatId: chatId,
+                                      contactId: otherId,
+                                      contactName: contactName,
+                                      profileImg: profileImageUrl,
+                                    ),
                                     child: Stack(
                                       children: [
                                         CircleAvatar(
@@ -236,9 +235,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        timeStr,
-                                        style: const TextStyle(fontSize: 12),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            timeStr,
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                          if (isMuted) ...[
+                                            const SizedBox(width: 4),
+                                            const Icon(Icons.volume_off, size: 16, color: Colors.grey),
+                                          ]
+                                        ],
                                       ),
                                       const SizedBox(height: 4),
                                       if ((data['unreadCounts']?[currentUserId] ?? 0) > 0)
@@ -299,32 +307,128 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
+  void _showQuickMenu({
+    required BuildContext ctx,
+    required String chatId,
+    required String contactId,
+    required String contactName,
+    required String? profileImg,
+  }) {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    showModalBottomSheet(
+      context: ctx,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('chats').doc(chatId).get(),
+        builder: (context, snap) {
+          if (!snap.hasData) {
+            return const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final data = snap.data!.data() as Map<String, dynamic>;
+          final mutedBy = List<String>.from(data['mutedBy'] ?? []);
+          final isMuted = mutedBy.contains(uid);
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.chat),
+                  title: const Text('Chat'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          contactId: contactId,
+                          contactName: contactName,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.person),
+                  title: const Text('View Profile'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showDialog(
+                      context: context,
+                      builder: (_) => ContactProfilePopup(
+                        contactId: contactId,
+                        contactName: contactName,
+                        profileImageUrl: profileImg,
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Icon(isMuted ? Icons.volume_up : Icons.volume_off),
+                  title: Text(isMuted ? 'Unmute' : 'Mute'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final ref = FirebaseFirestore.instance.collection('chats').doc(chatId);
+                    await ref.update({
+                      'mutedBy': isMuted
+                          ? FieldValue.arrayRemove([uid])
+                          : FieldValue.arrayUnion([uid]),
+                    });
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('Delete Chat', style: TextStyle(color: Colors.red)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final ok = await _showConfirmDialog(context, 'Delete this chat?');
+                    if (ok) {
+                      await FirebaseFirestore.instance.collection('chats').doc(chatId).delete();
+                    }
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildSwipeActionLeft() => Container(
-    color: Colors.blue,
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    alignment: Alignment.centerLeft,
-    child: const Row(
-      children: [
-        Icon(Icons.archive, color: Colors.white),
-        SizedBox(width: 8),
-        Text('Archive', style: TextStyle(color: Colors.white)),
-      ],
-    ),
-  );
+        color: Colors.blue,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        alignment: Alignment.centerLeft,
+        child: const Row(
+          children: [
+            Icon(Icons.archive, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Archive', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      );
 
   Widget _buildSwipeActionRight() => Container(
-    color: Colors.red,
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    alignment: Alignment.centerRight,
-    child: const Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Icon(Icons.delete, color: Colors.white),
-        SizedBox(width: 8),
-        Text('Delete', style: TextStyle(color: Colors.white)),
-      ],
-    ),
-  );
+        color: Colors.red,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        alignment: Alignment.centerRight,
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Icon(Icons.delete, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Delete', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      );
 
   Future<bool> _showConfirmDialog(BuildContext context, String msg) async {
     return await showDialog<bool>(
