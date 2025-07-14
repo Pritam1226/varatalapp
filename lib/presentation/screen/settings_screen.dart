@@ -119,9 +119,8 @@ class SettingsScreen extends StatelessWidget {
 
                 📲 Download now:
                 https://vartalap.com/download
-                ''';
-
-              Share.share(inviteMessage); // ✅ Share the message
+                '''; 
+              
             },
           ),
         ],
