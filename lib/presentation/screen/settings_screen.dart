@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Share package
-
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:varatalapp/controller/theme_controller.dart';
 import 'package:varatalapp/presentation/screen/blockedchats_screen.dart';
 import 'package:varatalapp/presentation/screen/chattheme_screen.dart';
@@ -16,10 +16,7 @@ class SettingsScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Settings'), centerTitle: true),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
@@ -48,7 +45,9 @@ class SettingsScreen extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ChatThemeScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const ChatThemeScreen(),
+                ),
               );
             },
           ),
@@ -59,7 +58,9 @@ class SettingsScreen extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ChatWallpaperScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const ChatWallpaperScreen(),
+                ),
               );
             },
           ),
@@ -85,7 +86,9 @@ class SettingsScreen extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ChatHistoryScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const ChatHistoryScreen(),
+                ),
               );
             },
           ),
@@ -96,7 +99,9 @@ class SettingsScreen extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BlockedChatsScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const BlockedChatsScreen(),
+                ),
               );
             },
           ),
@@ -108,18 +113,19 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               final String inviteMessage = '''
-👋 Hey! Join me on Vartalap Chat App! 🗨️
+                👋 Hey! Join me on Vartalap Chat App! 🗨
 
-Experience secure and smooth chatting with friends and family!
+                Experience secure and smooth chatting with friends and family!
 
-📲 Download now:
-https://vartalap.com/download
-'''; 
-              
+                📲 Download now:
+                https://vartalap.com/download
+                ''';
+
+              Share.share(inviteMessage); // ✅ Share the message
             },
           ),
         ],
-      ),
-    );
-  }
+     ),
+);
+}
 }
