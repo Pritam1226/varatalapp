@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'package:varatalapp/presentation/screen/addcontact_screen.dart';
 import 'package:varatalapp/presentation/screen/contact/profile_detail_screen.dart';
 import 'chatscreen.dart';
@@ -29,7 +30,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vartalap'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/logo.png',          // ⚠️ ensure this path and pubspec.yaml entry
+              height: 28,
+              width: 28,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Vartalap',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.camera_alt),
@@ -77,6 +91,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ? const Center(child: Text('User not logged in'))
           : Column(
               children: [
+                // 🔍 Search bar
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
@@ -104,6 +119,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                   ),
                 ),
+                // 📝 Chat list
                 Expanded(
                   child: ValueListenableBuilder<String>(
                     valueListenable: _searchQuery,
@@ -129,6 +145,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
                           var docs = snapshot.data?.docs ?? [];
 
+                          // 🔍 filter by search
                           if (query.isNotEmpty) {
                             docs = docs.where((d) {
                               final data = d.data() as Map<String, dynamic>;
@@ -162,6 +179,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             );
                           }
 
+                          // 🖥️ List view
                           return ListView.builder(
                             itemCount: docs.length,
                             itemBuilder: (context, index) {
@@ -188,9 +206,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               final lastMsg = data['lastMessage'] ?? '';
                               final time =
                                   data['lastMessageTime'] as Timestamp?;
-                              final timeStr = time != null
-                                  ? formatTime(time)
-                                  : '';
+                              final timeStr =
+                                  time != null ? formatTime(time) : '';
 
                               final isMuted = List<String>.from(
                                 data['mutedBy'] ?? [],
@@ -219,6 +236,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                             ? const Icon(Icons.person)
                                             : null,
                                       ),
+                                      // 🟢 Online indicator
                                       Positioned(
                                         bottom: 0,
                                         right: 0,
@@ -251,10 +269,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                                 canShowOnline = true;
                                               } else if (visibility ==
                                                   'my_contact') {
-                                                // TODO: check if current user is in their contact list
+                                                // TODO: verify contact list
                                                 canShowOnline = true;
-                                              } else {
-                                                canShowOnline = false;
                                               }
                                             }
 
@@ -262,15 +278,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               width: 12,
                                               height: 12,
                                               decoration: BoxDecoration(
-                                                color:
-                                                    (isOnline && canShowOnline)
+                                                color: (isOnline &&
+                                                        canShowOnline)
                                                     ? Colors.green
                                                     : Colors.grey,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
-                                                  color: Colors.white,
-                                                  width: 2,
-                                                ),
+                                                    color: Colors.white,
+                                                    width: 2),
                                               ),
                                             );
                                           },
@@ -297,31 +312,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(
-                                          timeStr,
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
+                                        Text(timeStr,
+                                            style: const TextStyle(
+                                                fontSize: 12)),
                                         const SizedBox(width: 4),
                                         if (isMuted)
-                                          const Icon(
-                                            Icons.volume_off,
-                                            size: 16,
-                                            color: Colors.grey,
-                                          ),
+                                          const Icon(Icons.volume_off,
+                                              size: 16, color: Colors.grey),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     if (unreadCount > 0)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
+                                            horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
                                           color: Colors.red,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                         child: Text(
                                           '$unreadCount',
@@ -356,6 +364,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
+  // 📷 Camera capture
   Future<void> _handleCameraCapture() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
@@ -368,6 +377,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
+  // ⋮ Quick options bottom sheet
   void _showQuickOptions(
     BuildContext context,
     String chatId,
@@ -406,7 +416,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ProfileDetailScreen(contactId: contactId),
+                    builder: (_) =>
+                        ProfileDetailScreen(contactId: contactId),
                   ),
                 );
               },
@@ -429,10 +440,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text(
-                'Delete Chat',
-                style: TextStyle(color: Colors.red),
-              ),
+              title: const Text('Delete Chat',
+                  style: TextStyle(color: Colors.red)),
               onTap: () async {
                 Navigator.pop(context);
                 await FirebaseFirestore.instance

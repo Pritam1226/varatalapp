@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:varatalapp/controller/theme_controller.dart';
 import 'package:varatalapp/config/theme/app_theme.dart';
+
 import 'package:varatalapp/presentation/screen/loginscreen.dart';
 import 'package:varatalapp/presentation/screen/chatlistscreen.dart';
+import 'package:varatalapp/presentation/screen/home_screen.dart';
+
 import 'package:animated_text_kit/animated_text_kit.dart';
 
 void main() async {
@@ -32,31 +36,37 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeController.currentTheme,
-          home: const SplashScreen(), // 👈 Show splash first
-          routes: {'/chatList': (_) => const ChatListScreen()},
+          home: const SplashScreen(),      // first screen
+          routes: {
+            '/chatList': (_) => const ChatListScreen(),
+            '/home': (_)     => const HomeScreen(),
+            '/login': (_)    => const LoginScreen(),
+          },
         );
       },
     );
   }
 }
 
+/// ---------------------------------------------------------------------------
+///                             SPLASH  SCREEN
+/// ---------------------------------------------------------------------------
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+
+    /// wait 3 s, then decide where to go
     Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      final user = FirebaseAuth.instance.currentUser;
+      final destination = user == null ? '/login' : '/home';
+      if (mounted) Navigator.pushReplacementNamed(context, destination);
     });
   }
 
@@ -65,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color.fromARGB(255, 0, 0, 0) : Colors.white,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -76,9 +86,9 @@ class _SplashScreenState extends State<SplashScreen>
               totalRepeatCount: 1,
               animatedTexts: [
                 TypewriterAnimatedText(
-                  ' Let\'s Start Vartalap ',
+                  " Let's Start Vartalap ",
                   textStyle: const TextStyle(
-                    fontSize: 24.0,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                   speed: const Duration(milliseconds: 80),
