@@ -32,11 +32,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Image.asset(
-              'assets/logo.png',          // ⚠️ ensure this path and pubspec.yaml entry
-              height: 28,
-              width: 28,
-            ),
+            Image.asset('assets/logo.png', height: 28, width: 28),
             const SizedBox(width: 8),
             const Text(
               'Vartalap',
@@ -73,7 +69,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 case 'logout':
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
-                    Navigator.popUntil(context, (r) => r.isFirst);
+                    // Clear back‑stack and go to login
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
                   }
                   break;
               }
@@ -206,8 +207,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               final lastMsg = data['lastMessage'] ?? '';
                               final time =
                                   data['lastMessageTime'] as Timestamp?;
-                              final timeStr =
-                                  time != null ? formatTime(time) : '';
+                              final timeStr = time != null
+                                  ? formatTime(time)
+                                  : '';
 
                               final isMuted = List<String>.from(
                                 data['mutedBy'] ?? [],
@@ -269,7 +271,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                                 canShowOnline = true;
                                               } else if (visibility ==
                                                   'my_contact') {
-                                                // TODO: verify contact list
                                                 canShowOnline = true;
                                               }
                                             }
@@ -278,14 +279,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               width: 12,
                                               height: 12,
                                               decoration: BoxDecoration(
-                                                color: (isOnline &&
-                                                        canShowOnline)
+                                                color:
+                                                    (isOnline && canShowOnline)
                                                     ? Colors.green
                                                     : Colors.grey,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
-                                                    color: Colors.white,
-                                                    width: 2),
+                                                  color: Colors.white,
+                                                  width: 2,
+                                                ),
                                               ),
                                             );
                                           },
@@ -312,24 +314,31 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(timeStr,
-                                            style: const TextStyle(
-                                                fontSize: 12)),
+                                        Text(
+                                          timeStr,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
                                         const SizedBox(width: 4),
                                         if (isMuted)
-                                          const Icon(Icons.volume_off,
-                                              size: 16, color: Colors.grey),
+                                          const Icon(
+                                            Icons.volume_off,
+                                            size: 16,
+                                            color: Colors.grey,
+                                          ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     if (unreadCount > 0)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 2),
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.red,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         child: Text(
                                           '$unreadCount',
@@ -416,8 +425,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        ProfileDetailScreen(contactId: contactId),
+                    builder: (_) => ProfileDetailScreen(contactId: contactId),
                   ),
                 );
               },
@@ -440,8 +448,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Chat',
-                  style: TextStyle(color: Colors.red)),
+              title: const Text(
+                'Delete Chat',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: () async {
                 Navigator.pop(context);
                 await FirebaseFirestore.instance

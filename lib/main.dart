@@ -7,8 +7,10 @@ import 'package:varatalapp/controller/theme_controller.dart';
 import 'package:varatalapp/config/theme/app_theme.dart';
 
 import 'package:varatalapp/presentation/screen/loginscreen.dart';
-import 'package:varatalapp/presentation/screen/chatlistscreen.dart';
 import 'package:varatalapp/presentation/screen/home_screen.dart';
+import 'package:varatalapp/presentation/screen/chatlistscreen.dart';
+import 'package:varatalapp/presentation/screen/updates_screen.dart';
+import 'package:varatalapp/presentation/screen/groups_screen.dart';
 
 import 'package:animated_text_kit/animated_text_kit.dart';
 
@@ -31,16 +33,15 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeController>(
       builder: (context, themeController, _) {
         return MaterialApp(
-          title: 'Vartalap Chat App',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeController.currentTheme,
-          home: const SplashScreen(),      // first screen
+          title: 'Vartalap Chat App',
+          home: const SplashScreen(),
           routes: {
-            '/chatList': (_) => const ChatListScreen(),
-            '/home': (_)     => const HomeScreen(),
-            '/login': (_)    => const LoginScreen(),
+            '/home': (_) => const HomeScreen(),
+            '/login': (_) => const LoginScreen(),
           },
         );
       },
@@ -48,9 +49,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// ---------------------------------------------------------------------------
-///                             SPLASH  SCREEN
-/// ---------------------------------------------------------------------------
+/// Splash Screen
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
@@ -61,19 +60,15 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-
-    /// wait 3 s, then decide where to go
     Future.delayed(const Duration(seconds: 3), () {
       final user = FirebaseAuth.instance.currentUser;
-      final destination = user == null ? '/login' : '/home';
-      if (mounted) Navigator.pushReplacementNamed(context, destination);
+      Navigator.pushReplacementNamed(context, user == null ? '/login' : '/home');
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       body: Center(

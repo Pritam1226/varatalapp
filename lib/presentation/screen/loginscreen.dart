@@ -34,14 +34,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final error = await controller.loginUser(email, password);
 
     if (error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Logged in successfully")),
-      );
-      Navigator.pushReplacementNamed(context, '/chatList');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("✅ Logged in successfully")));
+      Navigator.pushReplacementNamed(context, '/home'); // ✅ updated
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Login failed: $error")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("❌ Login failed: $error")));
     }
 
     setState(() => _isLoading = false);
@@ -62,16 +63,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   "Welcome to Vartalap",
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   "Sign in to continue",
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge
-                      ?.copyWith(color: Colors.grey),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(height: 30),
                 CustomTextField(
@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintText: "Email",
                   validator: controller.validateEmail,
                   prefixIcon: const Icon(Icons.email_outlined),
-                  onChanged: (_) {}, // ✅ Required by CustomTextField
+                  onChanged: (_) {},
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -102,16 +102,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           : Icons.visibility_rounded,
                     ),
                   ),
-                  onChanged: (_) {}, // ✅ Required by CustomTextField
+                  onChanged: (_) {},
                 ),
                 const SizedBox(height: 8),
-
-                // ✅ Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Replace with your actual route
                       Navigator.pushNamed(context, '/forgotPassword');
                     },
                     child: const Text(
@@ -120,7 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
                 CustomButton(
                   onPressed: _isLoading
@@ -142,9 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         TextSpan(
                           text: "Sign up",
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
+                          style: Theme.of(context).textTheme.bodyLarge
                               ?.copyWith(
                                 color: Theme.of(context).primaryColor,
                                 fontWeight: FontWeight.bold,
