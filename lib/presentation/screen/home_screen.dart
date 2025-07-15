@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chatlistscreen.dart'; // Your existing chat list
 import 'updates_screen.dart'; // Status screen
-import 'groups_screen.dart';  // Groups screen
+import 'groups_screen.dart'; // Groups screen
 
 /// HomeScreen with *bottom navigation bar* **and** swipe (TabBarView) support
 /// ────────────────────────────────────────────────────────────────────────────
@@ -15,7 +15,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
   final List<Widget> _pages = const [
@@ -24,11 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     GroupsScreen(),
   ];
 
-  final List<String> _subTitles = const [
-    'Chats',
-    'Updates',
-    'Groups',
-  ];
+  final List<String> _subTitles = const ['Chats', 'Updates', 'Groups'];
 
   @override
   void initState() {
@@ -58,9 +55,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           children: [
             Row(
               children: [
-                Image.asset('assets/logo.png', height: 28),
-                const SizedBox(width: 8),
-                const Text('Vartalap', style: TextStyle(fontSize: 20)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: 10,
+                        left: 2,
+                      ), // ⬅️ Adjust here
+                      child: CircleAvatar(
+                        radius: 23.5,
+                        backgroundImage: AssetImage('assets/logo2.png'),
+                      ),
+                    ),
+                    const SizedBox(
+                      width: 8,
+                    ), // Optional: Reduce spacing if needed
+                    const Text(
+                      'Vartalap',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             Text(
@@ -88,14 +107,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             icon: Icon(Icons.chat_bubble_outline),
             label: 'Chats',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.update),
-            label: 'Updates',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.group),
-            label: 'Groups',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.update), label: 'Updates'),
+          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Groups'),
         ],
       ),
     );
