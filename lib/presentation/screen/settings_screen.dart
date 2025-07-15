@@ -6,6 +6,7 @@ import 'package:varatalapp/presentation/screen/blockedchats_screen.dart';
 import 'package:varatalapp/presentation/screen/chattheme_screen.dart';
 import 'package:varatalapp/presentation/screen/chatwallpaper_screen.dart';
 import 'package:varatalapp/presentation/screen/chathistory_screen.dart';
+import 'package:varatalapp/presentation/screen/privacy_settings_screen.dart'; // ✅ Import privacy screen
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -80,6 +81,19 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.privacy_tip),
+            title: const Text('Privacy Settings'), // ✅ New Option
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PrivacySettingsScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Chat History'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -106,25 +120,38 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
 
-          // ✅ Invite a Friend Feature
+          const Divider(),
+
+          // Section: Others
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+            child: Text(
+              'Others',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.person_add_alt_1),
             title: const Text('Invite a Friend'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              final String inviteMessage = '''
-                👋 Hey! Join me on Vartalap Chat App! 🗨
+              const String inviteMessage = '''
+👋 Hey! Join me on Vartalap Chat App! 🗨
 
-                Experience secure and smooth chatting with friends and family!
+Experience secure and smooth chatting with friends and family!
 
-                📲 Download now:
-                https://vartalap.com/download
-                '''; 
-              
+📲 Download now:
+https://vartalap.com/download
+''';
+              Share.share(inviteMessage);
             },
           ),
         ],
-     ),
-);
-}
+      ),
+    );
+  }
 }
