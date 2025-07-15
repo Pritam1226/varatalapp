@@ -70,17 +70,13 @@ class _SplashScreenState extends State<SplashScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/logo.png', // ⚠️ Ensure this path is correct and declared in pubspec.yaml
-              width: 120,
-              height: 120,
-            ),
+            Image.asset('assets/logo.png', width: 120, height: 120),
             const SizedBox(height: 20),
             AnimatedTextKit(
               totalRepeatCount: 1,
               animatedTexts: [
                 TypewriterAnimatedText(
-                  'Vartalap Chat App',
+                  ' Let\'s Start Vartalap ',
                   textStyle: const TextStyle(
                     fontSize: 24.0,
                     fontWeight: FontWeight.bold,
