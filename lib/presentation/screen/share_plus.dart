@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 class ShareInviteScreen extends StatelessWidget {
   const ShareInviteScreen({super.key});
 
@@ -13,7 +12,6 @@ Download now and start chatting instantly!
 📲 https://vartalap.com/download
 ''';
 
-    
     (message, subject: 'Invite to Vartalap Chat App');
   }
 

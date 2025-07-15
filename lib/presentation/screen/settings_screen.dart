@@ -119,12 +119,11 @@ class SettingsScreen extends StatelessWidget {
 
                 📲 Download now:
                 https://vartalap.com/download
-                '''; 
-              
+                ''';
             },
           ),
         ],
-     ),
-);
-}
+      ),
+    );
+  }
 }
