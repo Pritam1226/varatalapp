@@ -6,13 +6,14 @@ import 'package:varatalapp/controller/theme_controller.dart';
 import 'package:varatalapp/config/theme/app_theme.dart';
 import 'package:varatalapp/presentation/screen/loginscreen.dart';
 import 'package:varatalapp/presentation/screen/chatlistscreen.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();           // ✅ Firebase init
+  await Firebase.initializeApp();
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ThemeController(),     // ✅ Provide theme controller
+      create: (_) => ThemeController(),
       child: const MyApp(),
     ),
   );
@@ -28,15 +29,69 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Vartalap Chat App',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,        // 🌞 Light theme
-          darkTheme: AppTheme.darkTheme,     // 🌚 Dark theme (add it in app_theme.dart)
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
           themeMode: themeController.currentTheme,
-          home: const LoginScreen(),
-          routes: {
-            '/chatList': (_) => const ChatListScreen(),
-          },
+          home: const SplashScreen(), // 👈 Show splash first
+          routes: {'/chatList': (_) => const ChatListScreen()},
         );
       },
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? Colors.black : Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/logo.png', // ⚠️ Ensure this path is correct and declared in pubspec.yaml
+              width: 120,
+              height: 120,
+            ),
+            const SizedBox(height: 20),
+            AnimatedTextKit(
+              totalRepeatCount: 1,
+              animatedTexts: [
+                TypewriterAnimatedText(
+                  'Vartalap Chat App',
+                  textStyle: const TextStyle(
+                    fontSize: 24.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  speed: const Duration(milliseconds: 80),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

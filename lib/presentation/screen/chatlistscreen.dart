@@ -39,16 +39,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
             onSelected: (value) async {
               switch (value) {
                 case 'profile':
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
                   break;
                 case 'settings':
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
                   break;
                 case 'add_contact':
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const AddContactScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddContactScreen()),
+                  );
                   break;
                 case 'logout':
                   await FirebaseAuth.instance.signOut();
@@ -112,11 +118,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return const Center(
-                                child: CircularProgressIndicator());
+                              child: CircularProgressIndicator(),
+                            );
                           }
                           if (snapshot.hasError) {
                             return Center(
-                                child: Text('Error: ${snapshot.error}'));
+                              child: Text('Error: ${snapshot.error}'),
+                            );
                           }
 
                           var docs = snapshot.data?.docs ?? [];
@@ -124,13 +132,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           if (query.isNotEmpty) {
                             docs = docs.where((d) {
                               final data = d.data() as Map<String, dynamic>;
-                              final users =
-                                  List<String>.from(data['users'] ?? []);
+                              final users = List<String>.from(
+                                data['users'] ?? [],
+                              );
                               final otherId = users.firstWhere(
-                                  (u) => u != currentUserId,
-                                  orElse: () => '');
+                                (u) => u != currentUserId,
+                                orElse: () => '',
+                              );
                               final names = Map<String, dynamic>.from(
-                                  data['contactNames'] ?? {});
+                                data['contactNames'] ?? {},
+                              );
                               final name = (names[otherId] ?? '')
                                   .toString()
                                   .toLowerCase();
@@ -144,8 +155,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
                           if (docs.isEmpty) {
                             return const Center(
-                              child: Text('No chats found',
-                                  style: TextStyle(color: Colors.grey)),
+                              child: Text(
+                                'No chats found',
+                                style: TextStyle(color: Colors.grey),
+                              ),
                             );
                           }
 
@@ -154,30 +167,34 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             itemBuilder: (context, index) {
                               final doc = docs[index];
                               final data = doc.data() as Map<String, dynamic>;
-                              final users =
-                                  List<String>.from(data['users'] ?? []);
+                              final users = List<String>.from(
+                                data['users'] ?? [],
+                              );
                               final otherId = users.firstWhere(
-                                  (u) => u != currentUserId,
-                                  orElse: () => '');
+                                (u) => u != currentUserId,
+                                orElse: () => '',
+                              );
 
                               final names = Map<String, dynamic>.from(
-                                  data['contactNames'] ?? {});
-                              final contactName =
-                                  names[otherId] ?? 'Contact';
+                                data['contactNames'] ?? {},
+                              );
+                              final contactName = names[otherId] ?? 'Contact';
 
                               final imgs = Map<String, dynamic>.from(
-                                  data['contactProfileImages'] ?? {});
+                                data['contactProfileImages'] ?? {},
+                              );
                               final profileImageUrl = imgs[otherId];
 
                               final lastMsg = data['lastMessage'] ?? '';
                               final time =
                                   data['lastMessageTime'] as Timestamp?;
-                              final timeStr =
-                                  time != null ? formatTime(time) : '';
+                              final timeStr = time != null
+                                  ? formatTime(time)
+                                  : '';
 
                               final isMuted = List<String>.from(
-                                      data['mutedBy'] ?? [])
-                                  .contains(currentUserId);
+                                data['mutedBy'] ?? [],
+                              ).contains(currentUserId);
                               final unreadCount =
                                   data['unreadCounts']?[currentUserId] ?? 0;
 
@@ -195,10 +212,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     children: [
                                       CircleAvatar(
                                         radius: 25,
-                                        backgroundImage:
-                                            profileImageUrl != null
-                                                ? NetworkImage(profileImageUrl)
-                                                : null,
+                                        backgroundImage: profileImageUrl != null
+                                            ? NetworkImage(profileImageUrl)
+                                            : null,
                                         child: profileImageUrl == null
                                             ? const Icon(Icons.person)
                                             : null,
@@ -213,29 +229,53 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               .snapshots(),
                                           builder: (context, snap) {
                                             bool isOnline = false;
+                                            bool canShowOnline = false;
+
                                             if (snap.hasData &&
                                                 snap.data!.data() != null) {
-                                              final userData = snap.data!.data()
-                                                  as Map<String, dynamic>;
+                                              final userData =
+                                                  snap.data!.data()
+                                                      as Map<String, dynamic>;
+
                                               isOnline =
                                                   userData['isOnline'] == true;
+
+                                              final visibility =
+                                                  (userData['showOnlineStatus'] ??
+                                                          'everyone')
+                                                      .toString()
+                                                      .trim()
+                                                      .toLowerCase();
+
+                                              if (visibility == 'everyone') {
+                                                canShowOnline = true;
+                                              } else if (visibility ==
+                                                  'my_contact') {
+                                                // TODO: check if current user is in their contact list
+                                                canShowOnline = true;
+                                              } else {
+                                                canShowOnline = false;
+                                              }
                                             }
+
                                             return Container(
                                               width: 12,
                                               height: 12,
                                               decoration: BoxDecoration(
-                                                color: isOnline
+                                                color:
+                                                    (isOnline && canShowOnline)
                                                     ? Colors.green
                                                     : Colors.grey,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
-                                                    color: Colors.white,
-                                                    width: 2),
+                                                  color: Colors.white,
+                                                  width: 2,
+                                                ),
                                               ),
                                             );
                                           },
                                         ),
-                                      )
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -245,9 +285,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       ? lastMsg
                                       : 'Start a chat…',
                                   style: TextStyle(
-                                      fontStyle: lastMsg.isEmpty
-                                          ? FontStyle.italic
-                                          : null),
+                                    fontStyle: lastMsg.isEmpty
+                                        ? FontStyle.italic
+                                        : null,
+                                  ),
                                 ),
                                 trailing: Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -256,24 +297,31 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(timeStr,
-                                            style:
-                                                const TextStyle(fontSize: 12)),
+                                        Text(
+                                          timeStr,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
                                         const SizedBox(width: 4),
                                         if (isMuted)
-                                          const Icon(Icons.volume_off,
-                                              size: 16, color: Colors.grey),
+                                          const Icon(
+                                            Icons.volume_off,
+                                            size: 16,
+                                            color: Colors.grey,
+                                          ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     if (unreadCount > 0)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 2),
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.red,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         child: Text(
                                           '$unreadCount',
@@ -314,8 +362,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (pickedFile != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content:
-                Text('Camera image captured! (Implement sharing logic)')),
+          content: Text('Camera image captured! (Implement sharing logic)'),
+        ),
       );
     }
   }
@@ -369,8 +417,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 final uid = FirebaseAuth.instance.currentUser!.uid;
-                final doc =
-                    FirebaseFirestore.instance.collection('chats').doc(chatId);
+                final doc = FirebaseFirestore.instance
+                    .collection('chats')
+                    .doc(chatId);
                 await doc.update({
                   'mutedBy': isMuted
                       ? FieldValue.arrayRemove([uid])
@@ -380,8 +429,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Chat',
-                  style: TextStyle(color: Colors.red)),
+              title: const Text(
+                'Delete Chat',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: () async {
                 Navigator.pop(context);
                 await FirebaseFirestore.instance

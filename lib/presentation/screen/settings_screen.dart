@@ -146,8 +146,7 @@ Experience secure and smooth chatting with friends and family!
 
                 📲 Download now:
                 https://vartalap.com/download
-                '''; 
-              
+                ''';
             },
           ),
         ],

@@ -24,8 +24,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _fetchUserData() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
     if (snapshot.exists) {
       setState(() {
         userData = snapshot.data();
@@ -37,15 +39,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (userData == null) {
-      return const Scaffold(
-        body: Center(child: Text('User data not found.')),
-      );
+      return const Scaffold(body: Center(child: Text('User data not found.')));
     }
 
     return Scaffold(
@@ -58,7 +56,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: _showEditForm,
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage: (userData!['profileImageUrl'] ?? '').toString().isNotEmpty
+                backgroundImage:
+                    (userData!['profileImageUrl'] ?? '').toString().isNotEmpty
                     ? NetworkImage(userData!['profileImageUrl'])
                     : null,
                 child: (userData!['profileImageUrl'] ?? '').toString().isEmpty
@@ -67,11 +66,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(userData!['name'] ?? 'No Name',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              userData!['name'] ?? 'No Name',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 6),
-            Text(userData!['bio'] ?? 'No Bio',
-                style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            Text(
+              userData!['bio'] ?? 'No Bio',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
             const SizedBox(height: 24),
             ListTile(
               leading: const Icon(Icons.email),
@@ -83,9 +86,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const Spacer(),
             ElevatedButton.icon(
-              icon: const Icon(Icons.edit),
-              label: const Text("Edit Profile"),
               onPressed: _showEditForm,
+              icon: const Icon(Icons.edit, color: Colors.white),
+              label: const Text(
+                "Edit Profile",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 4, 97, 197),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                shadowColor: Colors.tealAccent.withOpacity(0.4),
+                splashFactory: InkRipple.splashFactory,
+              ),
             ),
           ],
         ),
@@ -113,11 +135,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Edit Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Edit Profile',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () async {
-                  final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+                  final picked = await ImagePicker().pickImage(
+                    source: ImageSource.gallery,
+                  );
                   if (picked != null) {
                     setModalState(() => selectedImage = File(picked.path));
                   }
@@ -126,10 +153,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   radius: 40,
                   backgroundImage: selectedImage != null
                       ? FileImage(selectedImage!)
-                      : (userData!['profileImageUrl'] ?? '').toString().isNotEmpty
-                          ? NetworkImage(userData!['profileImageUrl'])
-                          : null,
-                  child: (selectedImage == null && (userData!['profileImageUrl'] ?? '').toString().isEmpty)
+                      : (userData!['profileImageUrl'] ?? '')
+                            .toString()
+                            .isNotEmpty
+                      ? NetworkImage(userData!['profileImageUrl'])
+                      : null,
+                  child:
+                      (selectedImage == null &&
+                          (userData!['profileImageUrl'] ?? '')
+                              .toString()
+                              .isEmpty)
                       ? const Icon(Icons.camera_alt, size: 30)
                       : null,
                 ),
@@ -154,8 +187,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                         String imageUrl = userData!['profileImageUrl'] ?? '';
                         if (selectedImage != null) {
-                          final ref = FirebaseStorage.instance
-                              .ref('profile_images/${uid}.jpg');
+                          final ref = FirebaseStorage.instance.ref(
+                            'profile_images/$uid.jpg',
+                          );
                           await ref.putFile(selectedImage!);
                           imageUrl = await ref.getDownloadURL();
                         }
@@ -164,10 +198,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             .collection('users')
                             .doc(uid)
                             .update({
-                          'name': nameController.text.trim(),
-                          'bio': bioController.text.trim(),
-                          'profileImageUrl': imageUrl,
-                        });
+                              'name': nameController.text.trim(),
+                              'bio': bioController.text.trim(),
+                              'profileImageUrl': imageUrl,
+                            });
 
                         await _fetchUserData(); // Refresh
                         if (mounted) Navigator.pop(context);
