@@ -271,7 +271,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               height: 12,
                                               decoration: BoxDecoration(
                                                 color: showDot
-                                                    ? Colors.green
+                                                    ? const Color.fromARGB(255, 76, 170, 175)
                                                     : Colors.grey,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
