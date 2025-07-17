@@ -82,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.privacy_tip),
-            title: const Text('Privacy Settings'), // ✅ New Option
+            title: const Text('Privacy Settings'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               Navigator.push(
@@ -144,9 +144,11 @@ class SettingsScreen extends StatelessWidget {
 
 Experience secure and smooth chatting with friends and family!
 
-                📲 Download now:
-                https://vartalap.com/download
-                ''';
+📲 Download now:
+https://vartalap.com/download
+''';
+
+              Share.share(inviteMessage);
             },
           ),
         ],

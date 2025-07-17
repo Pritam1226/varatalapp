@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
@@ -18,6 +16,27 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  List<String> _participants = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchParticipants();
+  }
+
+  Future<void> _fetchParticipants() async {
+    final groupSnapshot = await _firestore
+        .collection('groups')
+        .doc(widget.groupId)
+        .get();
+    final participants = List<String>.from(
+      groupSnapshot.data()?['participants'] ?? [],
+    );
+    setState(() {
+      _participants = participants;
+    });
+  }
+
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
@@ -31,30 +50,53 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         .get();
     final senderName = userSnapshot.data()?['name'] ?? 'User';
 
+    final readStatus = {
+      for (var uid in _participants) uid: uid == currentUser.uid,
+    };
+
     final messageData = {
       'senderId': currentUser.uid,
       'senderName': senderName,
       'text': message,
       'timestamp': FieldValue.serverTimestamp(),
+      'readBy': readStatus,
     };
 
     try {
-      final groupDoc = _firestore.collection('groups').doc(widget.groupId);
-      await groupDoc.collection('messages').add(messageData);
-      await groupDoc.update({
+      await _firestore
+          .collection('groups')
+          .doc(widget.groupId)
+          .collection('messages')
+          .add(messageData);
+      await _firestore.collection('groups').doc(widget.groupId).update({
         'lastMessage': message,
         'lastMessageTime': FieldValue.serverTimestamp(),
       });
-
       _messageController.clear();
     } catch (e) {
-      print("Error sending message: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Failed to send message. Please try again."),
         ),
       );
     }
+  }
+
+  Future<void> _markAsRead(DocumentSnapshot msg) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    final msgData = msg.data() as Map<String, dynamic>;
+    final readBy = Map<String, dynamic>.from(msgData['readBy'] ?? {});
+
+    if (readBy[currentUser.uid] != true) {
+      readBy[currentUser.uid] = true;
+      await msg.reference.update({'readBy': readBy});
+    }
+  }
+
+  bool _isMessageReadByAll(Map<String, dynamic> readBy) {
+    return _participants.every((uid) => readBy[uid] == true);
   }
 
   @override
@@ -135,6 +177,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     final msg = messages[index];
                     final data = msg.data() as Map<String, dynamic>;
                     final isMe = data['senderId'] == currentUser.uid;
+                    final readBy = Map<String, dynamic>.from(
+                      data['readBy'] ?? {},
+                    );
+
+                    if (!isMe) _markAsRead(msg);
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(
@@ -162,6 +209,19 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                   ),
                                 ),
                               Text(data['text'] ?? ''),
+                              if (isMe)
+                                Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: Icon(
+                                    _isMessageReadByAll(readBy)
+                                        ? Icons.done_all
+                                        : Icons.done,
+                                    size: 18,
+                                    color: _isMessageReadByAll(readBy)
+                                        ? Colors.blue
+                                        : Colors.grey,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -180,13 +240,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.attach_file),
                   onPressed: () {
-                    // Extend this function to pick image/files or open camera
+                    // TODO: Implement file/image attachment
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.camera_alt),
                   onPressed: () {
-                    // Extend this function to pick image from camera
+                    // TODO: Implement camera picker
                   },
                 ),
                 Expanded(
