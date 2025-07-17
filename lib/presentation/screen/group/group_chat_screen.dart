@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:varatalapp/presentation/screen/group/group_info_screen.dart'; // ✅ Make sure this path is correct
 
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
@@ -96,7 +97,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   bool _isMessageReadByAll(Map<String, dynamic> readBy) {
-    return _participants.every((uid) => readBy[uid] == true);
+    return _participants.isNotEmpty &&
+        _participants.every((uid) => readBy[uid] == true);
   }
 
   @override
@@ -128,24 +130,35 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             final groupName = groupData['groupName'] ?? 'Group Chat';
             final groupImage = groupData['groupIcon'] ?? '';
 
-            return Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: groupImage.isNotEmpty
-                      ? NetworkImage(groupImage)
-                      : null,
-                  child: groupImage.isEmpty ? const Icon(Icons.group) : null,
-                  radius: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    groupName,
-                    style: const TextStyle(fontSize: 18),
-                    overflow: TextOverflow.ellipsis,
+            return InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        GroupInfoScreen(groupId: widget.groupId),
                   ),
-                ),
-              ],
+                );
+              },
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: groupImage.isNotEmpty
+                        ? NetworkImage(groupImage)
+                        : null,
+                    child: groupImage.isEmpty ? const Icon(Icons.group) : null,
+                    radius: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      groupName,
+                      style: const TextStyle(fontSize: 18),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -240,13 +253,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.attach_file),
                   onPressed: () {
-                    // TODO: Implement file/image attachment
+                    // TODO: Handle file/image attachments
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.camera_alt),
                   onPressed: () {
-                    // TODO: Implement camera picker
+                    // TODO: Handle camera picker
                   },
                 ),
                 Expanded(
