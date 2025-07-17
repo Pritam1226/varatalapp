@@ -114,7 +114,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.teal,
+        backgroundColor: const Color.fromARGB(255, 93, 153, 232),
         title: StreamBuilder<DocumentSnapshot>(
           stream: _firestore
               .collection('groups')
@@ -192,37 +192,76 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                         alignment: isMe
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isMe ? Colors.teal[300] : Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth:
+                                MediaQuery.of(context).size.width *
+                                0.7, // 70% width
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!isMe)
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isMe
+                                  ? const Color.fromARGB(255, 87, 151, 234)
+                                  : Colors.grey[300],
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(12),
+                                topRight: const Radius.circular(12),
+                                bottomLeft: isMe
+                                    ? const Radius.circular(12)
+                                    : Radius.zero,
+                                bottomRight: isMe
+                                    ? Radius.zero
+                                    : const Radius.circular(12),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (!isMe)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Text(
+                                      data['senderName'] ?? '',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
                                 Text(
-                                  data['senderName'] ?? '',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                  data['text'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: isMe ? Colors.white : Colors.black,
                                   ),
                                 ),
-                              Text(data['text'] ?? ''),
-                              if (isMe)
-                                Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Icon(
-                                    _isMessageReadByAll(readBy)
-                                        ? Icons.done_all
-                                        : Icons.done,
-                                    size: 18,
-                                    color: _isMessageReadByAll(readBy)
-                                        ? Colors.blue
-                                        : Colors.grey,
+                                if (isMe)
+                                  Align(
+                                    alignment: Alignment.bottomRight,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Icon(
+                                        _isMessageReadByAll(readBy)
+                                            ? Icons.done_all
+                                            : Icons.done,
+                                        size: 16,
+                                        color: _isMessageReadByAll(readBy)
+                                            ? const Color.fromARGB(
+                                                255,
+                                                75,
+                                                225,
+                                                110,
+                                              )
+                                            : Colors.white70,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -264,7 +303,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _sendMessage,
-                  color: Colors.teal,
+                  color: const Color.fromARGB(255, 46, 109, 218),
                 ),
               ],
             ),

@@ -18,7 +18,7 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -28,13 +28,43 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _wallpaperUrl;
   bool _isSearching = false;
   String _searchQuery = '';
-
+  String _contactStatus = 'Offline';
   String _chatId(String uid1, String uid2) =>
       (uid1.compareTo(uid2) < 0) ? '${uid1}_$uid2' : '${uid2}_$uid1';
+
+  void _listenToContactStatus() {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.contactId)
+        .snapshots()
+        .listen((snapshot) {
+          if (snapshot.exists) {
+            final isOnline = snapshot.data()?['isOnline'] ?? false;
+            setState(() => _contactStatus = isOnline ? 'Online' : 'Offline');
+          }
+        });
+  }
+
+  void _setUserOnline(bool isOnline) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .update({
+            'isOnline': isOnline,
+            if (!isOnline) 'lastSeen': FieldValue.serverTimestamp(),
+          });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadChatSettings();
+    _listenToContactStatus();
+    WidgetsBinding.instance.addObserver(this); // 👈 Add observer
+    _setUserOnline(true);
     _loadChatSettings();
   }
 
@@ -202,7 +232,20 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this); // 👈 Remove observer
+    _setUserOnline(false); // 👈 Mark offline
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _setUserOnline(true); // App in foreground
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _setUserOnline(false); // App in background
+    }
   }
 
   @override
@@ -231,14 +274,27 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Icon(Icons.person, color: Colors.white),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      widget.contactName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.contactName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          _contactStatus,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _contactStatus == 'Online'
+                                ? Colors.green
+                                : Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
