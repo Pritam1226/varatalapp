@@ -87,7 +87,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/logo.png', width: 120, height: 120),
+            Image.asset('assets/logo2.png', width: 120, height: 120),
             const SizedBox(height: 20),
             AnimatedTextKit(
               totalRepeatCount: 1,
