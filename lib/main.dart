@@ -11,6 +11,8 @@ import 'package:varatalapp/presentation/screen/home_screen.dart';
 import 'package:varatalapp/presentation/screen/chatlistscreen.dart';
 import 'package:varatalapp/presentation/screen/updates_screen.dart';
 import 'package:varatalapp/presentation/screen/groups_screen.dart';
+import 'package:varatalapp/presentation/screen/group/create_group_screen.dart';
+import 'package:varatalapp/presentation/screen/group/group_chat_screen.dart';
 
 import 'package:animated_text_kit/animated_text_kit.dart';
 
@@ -42,6 +44,13 @@ class MyApp extends StatelessWidget {
           routes: {
             '/home': (_) => const HomeScreen(),
             '/login': (_) => const LoginScreen(),
+            '/create-group': (_) => const CreateGroupScreen(),
+            '/group-chat': (context) {
+              final args =
+                  ModalRoute.of(context)!.settings.arguments
+                      as Map<String, dynamic>;
+              return GroupChatScreen(groupId: args['groupId']);
+            },
           },
         );
       },
@@ -62,7 +71,10 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     Future.delayed(const Duration(seconds: 3), () {
       final user = FirebaseAuth.instance.currentUser;
-      Navigator.pushReplacementNamed(context, user == null ? '/login' : '/home');
+      Navigator.pushReplacementNamed(
+        context,
+        user == null ? '/login' : '/home',
+      );
     });
   }
 

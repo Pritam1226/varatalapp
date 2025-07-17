@@ -1,13 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'chatlistscreen.dart'; // Your existing chat list
-import 'updates_screen.dart'; // Status screen
-import 'groups_screen.dart'; // Groups screen
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'chatlistscreen.dart';
+import 'updates_screen.dart';
+import 'groups_screen.dart';
 
-/// HomeScreen with *bottom navigation bar* **and** swipe (TabBarView) support
-/// ────────────────────────────────────────────────────────────────────────────
-/// • BottomNavigationBar at the bottom like WhatsApp (Chats / Updates / Groups)
-/// • Swipe left/right to change pages – the selected bottom tab updates too
-/// • AppBar shows your logo and app name on top, with a small “Chats/Updates/…”.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -16,8 +14,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
+  Timer? _heartbeatTimer;
 
   final List<Widget> _pages = const [
     ChatListScreen(),
@@ -27,21 +26,65 @@ class _HomeScreenState extends State<HomeScreen>
 
   final List<String> _subTitles = const ['Chats', 'Updates', 'Groups'];
 
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _pages.length, vsync: this);
-    // 👉 when user swipes pages, update bottom nav selection
+    WidgetsBinding.instance.addObserver(this);
+    _startHeartbeat();
+
     _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return; // skip mid‑swipe
+      if (_tabController.indexIsChanging) return;
       setState(() {});
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopHeartbeat();
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    if (state == AppLifecycleState.resumed) {
+      _startHeartbeat();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _stopHeartbeat();
+      _updateLastSeen(); // Update one last time
+    }
+  }
+
+  void _startHeartbeat() {
+    _updateLastSeen(); // initial ping
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _updateLastSeen();
+    });
+  }
+
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+  }
+
+  Future<void> _updateLastSeen() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    await _firestore.collection('users').doc(uid).update({
+      'lastSeen': FieldValue.serverTimestamp(),
+    });
   }
 
   @override
@@ -55,30 +98,34 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        top: 10,
-                        left: 2,
-                      ), // ⬅️ Adjust here
-                      child: CircleAvatar(
-                        radius: 23.5,
-                        backgroundImage: AssetImage('assets/logo2.png'),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, left: 2),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(40),
+                    child: Image.asset(
+                      'assets/logo2.png',
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.white,
+                        child: const Text(
+                          'V',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(
-                      width: 8,
-                    ), // Optional: Reduce spacing if needed
-                    const Text(
-                      'Vartalap',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Vartalap',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -88,20 +135,17 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ],
         ),
-        // No top TabBar because we are using bottom nav
       ),
       body: TabBarView(
         controller: _tabController,
-        physics: const BouncingScrollPhysics(), // nice swipe
+        physics: const BouncingScrollPhysics(),
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         selectedItemColor: Colors.teal,
         unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          _tabController.animateTo(index);
-        },
+        onTap: (index) => _tabController.animateTo(index),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),

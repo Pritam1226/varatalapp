@@ -24,6 +24,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
   String formatTime(Timestamp timestamp) =>
       DateFormat('hh:mm a').format(timestamp.toDate());
 
+  bool isUserOnline(Timestamp? lastSeen) {
+    if (lastSeen == null) return false;
+    return DateTime.now().difference(lastSeen.toDate()).inSeconds < 15;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
@@ -31,10 +36,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          children: [
-            // Image.asset('assets/logo.png', height: 28, width: 28),
-            // const SizedBox(width: 8),
-            const Text(
+          children: const [
+            Text(
               'Chats',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
             ),
@@ -69,7 +72,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 case 'logout':
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
-                    // Clear back‑stack and go to login
                     Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/login',
@@ -92,7 +94,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ? const Center(child: Text('User not logged in'))
           : Column(
               children: [
-                // 🔍 Search bar
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
@@ -120,7 +121,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                   ),
                 ),
-                // 📝 Chat list
                 Expanded(
                   child: ValueListenableBuilder<String>(
                     valueListenable: _searchQuery,
@@ -146,7 +146,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
                           var docs = snapshot.data?.docs ?? [];
 
-                          // 🔍 filter by search
                           if (query.isNotEmpty) {
                             docs = docs.where((d) {
                               final data = d.data() as Map<String, dynamic>;
@@ -180,7 +179,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             );
                           }
 
-                          // 🖥️ List view
                           return ListView.builder(
                             itemCount: docs.length,
                             itemBuilder: (context, index) {
@@ -238,7 +236,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                             ? const Icon(Icons.person)
                                             : null,
                                       ),
-                                      // 🟢 Online indicator
                                       Positioned(
                                         bottom: 0,
                                         right: 0,
@@ -248,39 +245,32 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               .doc(otherId)
                                               .snapshots(),
                                           builder: (context, snap) {
-                                            bool isOnline = false;
-                                            bool canShowOnline = false;
-
+                                            bool showDot = false;
                                             if (snap.hasData &&
-                                                snap.data!.data() != null) {
-                                              final userData =
+                                                snap.data != null) {
+                                              final user =
                                                   snap.data!.data()
-                                                      as Map<String, dynamic>;
-
-                                              isOnline =
-                                                  userData['isOnline'] == true;
-
+                                                      as Map<String, dynamic>?;
+                                              final lastSeen =
+                                                  user?['lastSeen']
+                                                      as Timestamp?;
                                               final visibility =
-                                                  (userData['showOnlineStatus'] ??
-                                                          'everyone')
-                                                      .toString()
-                                                      .trim()
-                                                      .toLowerCase();
-
-                                              if (visibility == 'everyone') {
-                                                canShowOnline = true;
-                                              } else if (visibility ==
-                                                  'my_contact') {
-                                                canShowOnline = true;
+                                                  user?['showOnlineStatus']
+                                                      ?.toString()
+                                                      .toLowerCase()
+                                                      .trim();
+                                              if (visibility == 'everyone' ||
+                                                  visibility == 'my_contact') {
+                                                showDot = isUserOnline(
+                                                  lastSeen,
+                                                );
                                               }
                                             }
-
                                             return Container(
                                               width: 12,
                                               height: 12,
                                               decoration: BoxDecoration(
-                                                color:
-                                                    (isOnline && canShowOnline)
+                                                color: showDot
                                                     ? Colors.green
                                                     : Colors.grey,
                                                 shape: BoxShape.circle,
@@ -373,7 +363,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  // 📷 Camera capture
   Future<void> _handleCameraCapture() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
@@ -386,7 +375,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
-  // ⋮ Quick options bottom sheet
   void _showQuickOptions(
     BuildContext context,
     String chatId,
