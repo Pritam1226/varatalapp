@@ -8,9 +8,6 @@ import 'package:varatalapp/config/theme/app_theme.dart';
 
 import 'package:varatalapp/presentation/screen/loginscreen.dart';
 import 'package:varatalapp/presentation/screen/home_screen.dart';
-import 'package:varatalapp/presentation/screen/chatlistscreen.dart';
-import 'package:varatalapp/presentation/screen/updates_screen.dart';
-import 'package:varatalapp/presentation/screen/groups_screen.dart';
 import 'package:varatalapp/presentation/screen/group/create_group_screen.dart';
 import 'package:varatalapp/presentation/screen/group/group_chat_screen.dart';
 
@@ -45,12 +42,16 @@ class MyApp extends StatelessWidget {
             '/home': (_) => const HomeScreen(),
             '/login': (_) => const LoginScreen(),
             '/create-group': (_) => const CreateGroupScreen(),
-            '/group-chat': (context) {
-              final args =
-                  ModalRoute.of(context)!.settings.arguments
-                      as Map<String, dynamic>;
-              return GroupChatScreen(groupId: args['groupId']);
-            },
+          },
+          onGenerateRoute: (settings) {
+            if (settings.name == '/group-chat') {
+              final args = settings.arguments as Map<String, dynamic>;
+              return MaterialPageRoute(
+                builder: (context) =>
+                    GroupChatScreen(groupId: args['groupId']),
+              );
+            }
+            return null;
           },
         );
       },

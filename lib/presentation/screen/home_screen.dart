@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'chatlistscreen.dart';
 import 'updates_screen.dart';
-import 'groups_screen.dart';
+import 'groups_screen.dart'; // This should not export GroupChatScreen directly
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,12 +61,12 @@ class _HomeScreenState extends State<HomeScreen>
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
       _stopHeartbeat();
-      _updateLastSeen(); // Update one last time
+      _updateLastSeen(); // Final ping before quitting
     }
   }
 
   void _startHeartbeat() {
-    _updateLastSeen(); // initial ping
+    _updateLastSeen();
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _updateLastSeen();
