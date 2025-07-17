@@ -2,9 +2,12 @@
 
 _Empowering Seamless Connections, Igniting Innovation Everywhere_
 
-![Last Commit](https://img.shields.io/github/last-commit/your-username/varatalapp)
+![Last Commit](https://img.shields.io/github/last-commit/Pritam1226/varatalapp)
 ![Dart](https://img.shields.io/badge/dart-66.8%25-blue)
-![Languages](https://img.shields.io/github/languages/count/your-username/varatalapp)
+![Languages](https://img.shields.io/github/languages/count/Pritam1226/varatalapp)
+
+
+
 
 ---
 
@@ -110,3 +113,41 @@ Developed by: [Jashbir18](https://github.com/Jashbir18)
 -
 Developed by: [avhoy](https://github.com/avhoy)
 ---
+🛠️ Installation
+---
+Follow these steps to set up and run VARATALAPP on your local machine:
+
+🔧 Prerequisites
+Flutter SDK (Latest stable version)
+
+Android Studio / VS Code
+
+Firebase account
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/Pritam1226/varatalapp
+
+2. **Get all project dependencies:**
+
+   ```bash
+   flutter pub get
+
+3. **Run the app on a connected device or emulator**
+
+   ```bash
+   flutter run
+
+4. **Analyze code for errors or warnings**
+
+   ```bash
+   flutter analyze
+
+5. **Build an APK (Android)**
+
+   ```bash
+   flutter build apk
+
+6. **Build an iOS app (macOS only)**
+  ```bash
+flutter build ios
