@@ -12,6 +12,7 @@ class PrivacySettingsScreen extends StatefulWidget {
 class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   String lastSeenVisibility = 'everyone';
   String profileVisibility = 'everyone';
+  bool disappearingMessages = false;
 
   final String uid = FirebaseAuth.instance.currentUser!.uid;
 
@@ -28,11 +29,12 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
       setState(() {
         lastSeenVisibility = doc['lastSeenVisibility'] ?? 'everyone';
         profileVisibility = doc['profileVisibility'] ?? 'everyone';
+        disappearingMessages = doc['disappearingMessages'] ?? false;
       });
     }
   }
 
-  // Update selected visibility option in Firestore
+  // Update dropdown values in Firestore
   Future<void> updateVisibility(String field, String value) async {
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
       field: value,
@@ -43,7 +45,17 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     });
   }
 
-  // Build Dropdown for each setting
+  // Update switch value in Firestore
+  Future<void> updateDisappearingMessages(bool value) async {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'disappearingMessages': value,
+    });
+    setState(() {
+      disappearingMessages = value;
+    });
+  }
+
+  // Dropdown builder
   Widget buildDropdown(String label, String value, String fieldKey) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,11 +90,18 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
       appBar: AppBar(title: const Text('Privacy Settings')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
           children: [
             buildDropdown('Last Seen & Online', lastSeenVisibility, 'lastSeenVisibility'),
             buildDropdown('Profile Photo Visibility', profileVisibility, 'profileVisibility'),
+
+            // 👇 New Switch for Disappearing Messages
+            SwitchListTile(
+              title: const Text('Disappearing Messages'),
+              subtitle: const Text('Messages will disappear after 24 hours'),
+              value: disappearingMessages,
+              onChanged: (value) => updateDisappearingMessages(value),
+            ),
           ],
         ),
       ),
