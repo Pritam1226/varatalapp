@@ -12,7 +12,7 @@ class PrivacySettingsScreen extends StatefulWidget {
 class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   String lastSeenVisibility = 'everyone';
   String profileVisibility = 'everyone';
-  bool disappearingMessages = false;
+  DisappearingMessageDuration disappearingMessageDuration = DisappearingMessageDuration.off;
 
   final String uid = FirebaseAuth.instance.currentUser!.uid;
 
@@ -22,19 +22,21 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     loadUserSettings();
   }
 
-  // Load existing settings from Firestore
   Future<void> loadUserSettings() async {
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (doc.exists) {
       setState(() {
         lastSeenVisibility = doc['lastSeenVisibility'] ?? 'everyone';
         profileVisibility = doc['profileVisibility'] ?? 'everyone';
-        disappearingMessages = doc['disappearingMessages'] ?? false;
+        final durationStr = doc['disappearingMessageDuration'] ?? 'off';
+        disappearingMessageDuration = DisappearingMessageDuration.values.firstWhere(
+          (e) => e.toString().split('.').last == durationStr,
+          orElse: () => DisappearingMessageDuration.off,
+        );
       });
     }
   }
 
-  // Update dropdown values in Firestore
   Future<void> updateVisibility(String field, String value) async {
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
       field: value,
@@ -45,17 +47,15 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     });
   }
 
-  // Update switch value in Firestore
-  Future<void> updateDisappearingMessages(bool value) async {
+  Future<void> updateDisappearingMessageDuration(DisappearingMessageDuration value) async {
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'disappearingMessages': value,
+      'disappearingMessageDuration': value.toString().split('.').last,
     });
     setState(() {
-      disappearingMessages = value;
+      disappearingMessageDuration = value;
     });
   }
 
-  // Dropdown builder
   Widget buildDropdown(String label, String value, String fieldKey) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,6 +84,38 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     );
   }
 
+  String _getDurationText(DisappearingMessageDuration duration) {
+    switch (duration) {
+      case DisappearingMessageDuration.off:
+        return "Off";
+      case DisappearingMessageDuration.hours9:
+        return "9 Hours";
+      case DisappearingMessageDuration.hours24:
+        return "24 Hours";
+      case DisappearingMessageDuration.days7:
+        return "7 Days";
+    }
+  }
+
+  Widget _buildDisappearingOptions() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: DisappearingMessageDuration.values.map((option) {
+        return RadioListTile<DisappearingMessageDuration>(
+          title: Text(_getDurationText(option)),
+          value: option,
+          groupValue: disappearingMessageDuration,
+          onChanged: (value) {
+            if (value != null) {
+              updateDisappearingMessageDuration(value);
+              Navigator.pop(context);
+            }
+          },
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,16 +127,27 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
             buildDropdown('Last Seen & Online', lastSeenVisibility, 'lastSeenVisibility'),
             buildDropdown('Profile Photo Visibility', profileVisibility, 'profileVisibility'),
 
-            // 👇 New Switch for Disappearing Messages
-            SwitchListTile(
-              title: const Text('Disappearing Messages'),
-              subtitle: const Text('Messages will disappear after 24 hours'),
-              value: disappearingMessages,
-              onChanged: (value) => updateDisappearingMessages(value),
+            ListTile(
+              title: const Text("Disappearing Messages"),
+              subtitle: Text(_getDurationText(disappearingMessageDuration)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) => _buildDisappearingOptions(),
+                );
+              },
             ),
           ],
         ),
       ),
     );
   }
+}
+
+enum DisappearingMessageDuration {
+  off,
+  hours9,
+  hours24,
+  days7,
 }
