@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ For SystemNavigator.pop
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'chatlistscreen.dart';
 import 'updates_screen.dart';
-import 'groups_screen.dart'; // This should not export GroupChatScreen directly
+import 'groups_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +20,8 @@ class _HomeScreenState extends State<HomeScreen>
   late final TabController _tabController;
   Timer? _heartbeatTimer;
 
-  final List<Widget> _pages = const [
+  // ✅ Removed `const` since UpdatesScreen isn't const
+  final List<Widget> _pages = [
     ChatListScreen(),
     UpdatesScreen(),
     GroupsScreen(),
@@ -61,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen>
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
       _stopHeartbeat();
-      _updateLastSeen(); // Final ping before quitting
+      _updateLastSeen();
     }
   }
 
@@ -91,69 +94,83 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final int currentIndex = _tabController.index;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 10, left: 2),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(40),
-                    child: Image.asset(
-                      'assets/logo.png',
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.white,
-                        child: const Text(
-                          'V',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Colors.black,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop && Platform.isAndroid) {
+          SystemNavigator.pop(); // ✅ Sends app to background
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, left: 2),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(40),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.white,
+                          child: const Text(
+                            'V',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Vartalap',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Vartalap',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Text(
+                _subTitles[currentIndex],
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          controller: _tabController,
+          physics: const BouncingScrollPhysics(),
+          children: _pages,
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: currentIndex,
+          selectedItemColor: const Color.fromARGB(255, 14, 114, 236),
+          unselectedItemColor: Colors.grey,
+          onTap: (index) => _tabController.animateTo(index),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline),
+              label: 'Chats',
             ),
-            Text(
-              _subTitles[currentIndex],
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.update),
+              label: 'Updates',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.group),
+              label: 'Groups',
             ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: const BouncingScrollPhysics(),
-        children: _pages,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        selectedItemColor: const Color.fromARGB(255, 14, 114, 236),
-        unselectedItemColor: Colors.grey,
-        onTap: (index) => _tabController.animateTo(index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Chats',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.update), label: 'Updates'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Groups'),
-        ],
       ),
     );
   }

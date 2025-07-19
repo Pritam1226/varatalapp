@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'updates_screen.dart';
+import 'package:video_player/video_player.dart';
 
 class AddStatusScreen extends StatefulWidget {
   const AddStatusScreen({super.key});
@@ -14,80 +14,141 @@ class AddStatusScreen extends StatefulWidget {
 }
 
 class _AddStatusScreenState extends State<AddStatusScreen> {
-  File? _image;
   final picker = ImagePicker();
+  final currentUser = FirebaseAuth.instance.currentUser!;
+  final TextEditingController _textController = TextEditingController();
+  VideoPlayerController? _videoController;
+  File? _selectedFile;
+  String? _fileType; // image, video, or text
   bool _isUploading = false;
 
-  Future pickImage() async {
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+  Future<void> pickMedia(ImageSource source, {required bool isVideo}) async {
+    final picked = await (isVideo
+        ? picker.pickVideo(source: source)
+        : picker.pickImage(source: source));
+
     if (picked != null) {
       setState(() {
-        _image = File(picked.path);
+        _selectedFile = File(picked.path);
+        _fileType = isVideo ? "video" : "image";
+
+        if (isVideo) {
+          _videoController = VideoPlayerController.file(_selectedFile!)
+            ..initialize().then((_) {
+              setState(() {});
+              _videoController!.play();
+            });
+        }
       });
     }
   }
 
-  Future uploadStatus() async {
-    if (_image == null) return;
+  Future<void> uploadStatus() async {
+    if ((_selectedFile == null && _textController.text.isEmpty) || _isUploading) return;
 
-    setState(() {
-      _isUploading = true;
-    });
+    setState(() => _isUploading = true);
 
-    try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      final name = FirebaseAuth.instance.currentUser?.displayName ?? 'User';
-      final photoURL = FirebaseAuth.instance.currentUser?.photoURL ?? '';
+    String? downloadUrl;
 
+    if (_selectedFile != null) {
       final ref = FirebaseStorage.instance
-          .ref()
-          .child('status')
-          .child('$uid-${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-      await ref.putFile(_image!);
-      final url = await ref.getDownloadURL();
-
-      await FirebaseFirestore.instance.collection('statuses').doc(uid).set({
-        'uid': uid,
-        'name': name,
-        'profilePic': photoURL,
-        'statusUrl': url,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      Navigator.pop(context);
-    } catch (e) {
-      debugPrint('Upload failed: $e');
+          .ref('statuses/${currentUser.uid}/${DateTime.now().millisecondsSinceEpoch}');
+      await ref.putFile(_selectedFile!);
+      downloadUrl = await ref.getDownloadURL();
     }
+
+    await FirebaseFirestore.instance
+        .collection('statuses')
+        .doc(currentUser.uid)
+        .set({
+      'uid': currentUser.uid,
+      'name': currentUser.displayName ?? 'Unknown',
+      'profilePic': currentUser.photoURL ?? '',
+      'timestamp': FieldValue.serverTimestamp(),
+      'statusList': FieldValue.arrayUnion([
+        {
+          'type': _fileType ?? 'text',
+          'url': downloadUrl ?? '',
+          'text': _fileType == 'text' ? _textController.text.trim() : '',
+          'time': FieldValue.serverTimestamp(),
+        }
+      ])
+    }, SetOptions(merge: true));
 
     setState(() {
       _isUploading = false;
+      _selectedFile = null;
+      _fileType = null;
+      _textController.clear();
+      _videoController?.dispose();
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Status uploaded")),
+    );
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _videoController?.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Add Status")),
-      body: Center(
+      appBar: AppBar(
+        title: const Text("Add Status"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.send),
+            onPressed: uploadStatus,
+          )
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _image != null
-                ? Image.file(_image!, height: 200)
-                : const Icon(Icons.image, size: 100, color: Colors.grey),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: pickImage,
-              child: const Text("Pick Image"),
+            if (_fileType == 'image' && _selectedFile != null)
+              Image.file(_selectedFile!),
+            if (_fileType == 'video' &&
+                _selectedFile != null &&
+                _videoController != null &&
+                _videoController!.value.isInitialized)
+              AspectRatio(
+                aspectRatio: _videoController!.value.aspectRatio,
+                child: VideoPlayer(_videoController!),
+              ),
+            if (_fileType == null || _fileType == 'text')
+              TextField(
+                controller: _textController,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  hintText: "Type your status text...",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.image),
+                  onPressed: () => pickMedia(ImageSource.gallery, isVideo: false),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.videocam),
+                  onPressed: () => pickMedia(ImageSource.gallery, isVideo: true),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.camera_alt),
+                  onPressed: () => pickMedia(ImageSource.camera, isVideo: false),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isUploading ? null : uploadStatus,
-              child: _isUploading
-                  ? const CircularProgressIndicator()
-                  : const Text("Upload Status"),
-            ),
+            if (_isUploading) const CircularProgressIndicator(),
           ],
         ),
       ),
