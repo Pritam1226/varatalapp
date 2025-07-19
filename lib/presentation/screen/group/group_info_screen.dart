@@ -84,6 +84,99 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     ).then((_) => fetchGroupDetails());
   }
 
+  void _showParticipantOptions(
+    String uid,
+    String name,
+    bool isParticipantAdmin,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (!isParticipantAdmin)
+                ListTile(
+                  leading: const Icon(
+                    Icons.admin_panel_settings,
+                    color: Colors.green,
+                  ),
+                  title: const Text('Promote to Admin'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    toggleAdmin(uid, false);
+                  },
+                ),
+              if (isParticipantAdmin)
+                ListTile(
+                  leading: const Icon(
+                    Icons.remove_moderator,
+                    color: Colors.orange,
+                  ),
+                  title: const Text('Demote from Admin'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    toggleAdmin(uid, true);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.person_remove, color: Colors.red),
+                title: const Text('Remove Participant'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showRemoveConfirmation(uid, name);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRemoveConfirmation(String uid, String name) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Remove Participant'),
+          content: Text(
+            'Are you sure you want to remove $name from the group?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                removeParticipant(uid);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$name removed from group')),
+                );
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (groupDoc == null) {
@@ -96,16 +189,13 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     final isAdmin = admins.contains(currentUser.uid);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Group Info'),
-        actions: [
-          if (isAdmin)
-            IconButton(
-              icon: const Icon(Icons.person_add),
+      appBar: AppBar(title: const Text('Group Info')),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton(
               onPressed: goToAddParticipantScreen,
-            ),
-        ],
-      ),
+              child: const Icon(Icons.person_add),
+            )
+          : null,
       body: Column(
         children: [
           Expanded(
@@ -136,14 +226,6 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                       if (groupData['groupDescription'] != null) ...[
                         const SizedBox(height: 6),
                         Text(groupData['groupDescription']),
-                      ],
-                      if (isAdmin) ...[
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: goToAddParticipantScreen,
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('Add Participants'),
-                        ),
                       ],
                     ],
                   ),
@@ -193,56 +275,46 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                 ? const Icon(Icons.person)
                                 : null,
                           ),
-                          title: Text(name),
+                          title: Row(
+                            children: [
+                              Expanded(child: Text(name)),
+                              if (isParticipantAdmin)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'Admin',
+                                    style: TextStyle(
+                                      color: Colors.green,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           subtitle: Text(email),
                           trailing: uid == currentUser.uid
-                              ? (isParticipantAdmin
-                                    ? const Text(
-                                        "You (Admin)",
-                                        style: TextStyle(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      )
-                                    : const Text("You"))
-                              : isAdmin
-                              ? PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert),
-                                  onSelected: (value) {
-                                    if (value == 'promote') {
-                                      toggleAdmin(uid, false);
-                                    } else if (value == 'demote') {
-                                      toggleAdmin(uid, true);
-                                    } else if (value == 'remove') {
-                                      removeParticipant(uid);
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    if (!isParticipantAdmin)
-                                      const PopupMenuItem(
-                                        value: 'promote',
-                                        child: Text('Promote to Admin'),
-                                      ),
-                                    if (isParticipantAdmin)
-                                      const PopupMenuItem(
-                                        value: 'demote',
-                                        child: Text('Demote from Admin'),
-                                      ),
-                                    const PopupMenuItem(
-                                      value: 'remove',
-                                      child: Text(
-                                        'Remove Participant',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : isParticipantAdmin
                               ? const Text(
-                                  "Admin",
+                                  "You",
                                   style: TextStyle(
-                                    color: Colors.green,
+                                    color: Colors.blue,
                                     fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : isAdmin
+                              ? IconButton(
+                                  icon: const Icon(Icons.more_vert),
+                                  onPressed: () => _showParticipantOptions(
+                                    uid,
+                                    name,
+                                    isParticipantAdmin,
                                   ),
                                 )
                               : null,

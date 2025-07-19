@@ -91,14 +91,19 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       isLoading = true;
     });
 
-    final groupId = _firestore.collection('groups').doc().id;
+    // Generate a group document reference and ID
+    final groupDocRef = _firestore.collection('groups').doc();
+    final groupId = groupDocRef.id;
+
     final imageUrl = await uploadGroupImage(groupId);
     final members = [...selectedUserIds, currentUser.uid];
 
-    await _firestore.collection('groups').doc(groupId).set({
+    await groupDocRef.set({
+      'groupId': groupId, // ✅ Add groupId field
       'groupName': _groupNameController.text.trim(),
       'groupImageUrl': imageUrl ?? '',
       'members': members,
+      'admins': [currentUser.uid], // ✅ Add current user as admin
       'createdBy': currentUser.uid,
       'createdAt': Timestamp.now(),
       'lastMessage': '',
