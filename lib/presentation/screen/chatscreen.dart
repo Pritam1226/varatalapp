@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-import 'chat_widgets/voice_recorder.dart';
-import 'contact/profile_detail_screen.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:just_audio/just_audio.dart';
 
 class ChatScreen extends StatefulWidget {
   final String contactName;
@@ -33,7 +36,6 @@ class _ChatScreenState extends State<ChatScreen>
   String _searchQuery = '';
   String _contactStatus = 'Offline';
 
-  // Attachment-related variables
   bool _showAttachmentOptions = false;
   late AnimationController _attachmentAnimationController;
   late Animation<double> _attachmentAnimation;
@@ -76,7 +78,6 @@ class _ChatScreenState extends State<ChatScreen>
     WidgetsBinding.instance.addObserver(this);
     _setUserOnline(true);
 
-    // Initialize animation controller for attachment options
     _attachmentAnimationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -199,15 +200,12 @@ class _ChatScreenState extends State<ChatScreen>
     }, SetOptions(merge: true));
   }
 
-  // New method to handle image selection
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
       );
       if (image != null) {
-        // Here you would typically upload the image to Firebase Storage
-        // and then send the image URL as a message
         await _sendMediaMessage(image.path, 'image');
       }
     } catch (e) {
@@ -219,15 +217,12 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  // New method to handle video selection
   Future<void> _pickVideo() async {
     try {
       final XFile? video = await _imagePicker.pickVideo(
         source: ImageSource.gallery,
       );
       if (video != null) {
-        // Here you would typically upload the video to Firebase Storage
-        // and then send the video URL as a message
         await _sendMediaMessage(video.path, 'video');
       }
     } catch (e) {
@@ -239,14 +234,11 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  // New method to handle file selection
   Future<void> _pickFile() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles();
       if (result != null) {
         String filePath = result.files.single.path!;
-        // Here you would typically upload the file to Firebase Storage
-        // and then send the file URL as a message
         await _sendMediaMessage(filePath, 'file');
       }
     } catch (e) {
@@ -258,24 +250,31 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  // New method to send media messages
   Future<void> _sendMediaMessage(String filePath, String type) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-
     final senderId = currentUser.uid;
     final receiverId = widget.contactId;
     final chatId = _chatId(senderId, receiverId);
     final timestamp = FieldValue.serverTimestamp();
 
-    // In a real app, you would upload the file to Firebase Storage first
-    // For now, we'll just send the local file path (this won't work in production)
-    final messageData = {
-      'type': type,
-      'filePath': filePath,
-      'senderId': senderId,
-      'timestamp': timestamp,
-    };
+    final ext = filePath.split(".").last;
+    final fileName = "${DateTime.now().millisecondsSinceEpoch}.$ext";
+    final storageRef = FirebaseStorage.instance.ref().child(
+      'user_uploads/${currentUser.uid}/$fileName',
+    );
+    final file = File(filePath);
+    String downloadUrl = "";
+    try {
+      await storageRef.putFile(file);
+      downloadUrl = await storageRef.getDownloadURL();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to upload: $e')));
+      return;
+    }
 
     final senderSnapshot = await FirebaseFirestore.instance
         .collection('users')
@@ -287,6 +286,13 @@ class _ChatScreenState extends State<ChatScreen>
         .get();
     final currentUserName = senderSnapshot.data()?['name'] ?? 'Unknown';
     final receiverName = receiverSnapshot.data()?['name'] ?? 'Contact';
+
+    final messageData = {
+      'type': type,
+      'fileUrl': downloadUrl,
+      'senderId': senderId,
+      'timestamp': timestamp,
+    };
 
     final chatRef = FirebaseFirestore.instance.collection('chats').doc(chatId);
     await chatRef.collection('messages').add(messageData);
@@ -300,12 +306,10 @@ class _ChatScreenState extends State<ChatScreen>
     }, SetOptions(merge: true));
   }
 
-  // Toggle attachment options visibility
   void _toggleAttachmentOptions() {
     setState(() {
       _showAttachmentOptions = !_showAttachmentOptions;
     });
-
     if (_showAttachmentOptions) {
       _attachmentAnimationController.forward();
     } else {
@@ -319,14 +323,6 @@ class _ChatScreenState extends State<ChatScreen>
     final chatDoc = FirebaseFirestore.instance.collection('chats').doc(chatId);
 
     switch (value) {
-      case 'view':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProfileDetailScreen(contactId: widget.contactId),
-          ),
-        );
-        break;
       case 'unpin':
         await chatDoc.set({
           'pinnedMessage': FieldValue.delete(),
@@ -390,49 +386,7 @@ class _ChatScreenState extends State<ChatScreen>
     return Scaffold(
       appBar: AppBar(
         title: !_isSearching
-            ? Row(
-                children: [
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ProfileDetailScreen(contactId: widget.contactId),
-                        ),
-                      );
-                    },
-                    child: const CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.contactName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          _contactStatus,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _contactStatus == 'Online'
-                                ? Colors.green
-                                : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              )
+            ? Text(widget.contactName)
             : TextField(
                 autofocus: true,
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -453,7 +407,6 @@ class _ChatScreenState extends State<ChatScreen>
           PopupMenuButton<String>(
             onSelected: _handleMenuAction,
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'view', child: Text('View Contact')),
               if (_pinnedMessage != null)
                 const PopupMenuItem(
                   value: 'unpin',
@@ -554,16 +507,41 @@ class _ChatScreenState extends State<ChatScreen>
 
                           switch (m['type']) {
                             case 'audio':
+                              final audioUrl = m['audioUrl'];
+                              final duration = m['duration'] ?? 0.0;
+                              final player = AudioPlayer();
+
                               content = Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                                crossAxisAlignment: isMe
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.play_arrow),
-                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(Icons.play_arrow),
+                                        onPressed: () async {
+                                          try {
+                                            // Print this for debugging
+                                            print('Trying to play: $audioUrl');
+                                            await player.setUrl(audioUrl);
+                                            await player.play();
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  "Failed to play audio: $e",
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
                                       Text(
-                                        '${m['duration'].toStringAsFixed(1)} sec',
+                                        '${duration.toStringAsFixed(1)} sec',
                                       ),
                                     ],
                                   ),
@@ -574,8 +552,9 @@ class _ChatScreenState extends State<ChatScreen>
                                   ),
                                 ],
                               );
-                              displayText = '[Voice Message]';
+                              displayText = '[Voice]';
                               break;
+
                             case 'image':
                               content = Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -585,7 +564,14 @@ class _ChatScreenState extends State<ChatScreen>
                                     children: [
                                       const Icon(Icons.image),
                                       const SizedBox(width: 8),
-                                      const Text('Image'),
+                                      m['fileUrl'] != null
+                                          ? Image.network(
+                                              m['fileUrl'],
+                                              width: 120,
+                                              height: 120,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : const Text('Image'),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
@@ -606,7 +592,11 @@ class _ChatScreenState extends State<ChatScreen>
                                     children: [
                                       const Icon(Icons.videocam),
                                       const SizedBox(width: 8),
-                                      const Text('Video'),
+                                      m['fileUrl'] != null
+                                          ? Text(
+                                              'Video attached',
+                                            ) // You can integrate a video player if you wish!
+                                          : const Text('Video'),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
@@ -627,7 +617,9 @@ class _ChatScreenState extends State<ChatScreen>
                                     children: [
                                       const Icon(Icons.insert_drive_file),
                                       const SizedBox(width: 8),
-                                      const Text('File'),
+                                      m['fileUrl'] != null
+                                          ? Text('File attached')
+                                          : const Text('File'),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
@@ -758,7 +750,39 @@ class _ChatScreenState extends State<ChatScreen>
                         )
                       else
                         VoiceRecorder(
-                          onSend: _isBlocked ? (_, __) {} : _sendVoiceMessage,
+                          onStop: (filePath, duration) async {
+                            if (_isBlocked) return;
+                            final currentUser =
+                                FirebaseAuth.instance.currentUser;
+                            if (currentUser == null) return;
+                            final file = File(filePath);
+                            if (!file.existsSync()) return;
+
+                            final fileName =
+                                '${DateTime.now().millisecondsSinceEpoch}.aac';
+                            final storageRef = FirebaseStorage.instance
+                                .ref()
+                                .child(
+                                  'user_uploads/${currentUser.uid}/$fileName',
+                                );
+                            try {
+                              await storageRef.putFile(file);
+                              final downloadUrl = await storageRef
+                                  .getDownloadURL();
+                              // Print for debugging
+                              print('audioUrl sent to Firestore: $downloadUrl');
+                              await _sendVoiceMessage(downloadUrl, duration);
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Failed to upload/send voice: $e',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                         ),
                     ],
                   ),
@@ -766,7 +790,6 @@ class _ChatScreenState extends State<ChatScreen>
               ],
             ),
           ),
-          // Floating attachment options
           if (_showAttachmentOptions)
             Positioned(
               bottom: 80,
@@ -857,9 +880,78 @@ class _AttachmentOption extends StatelessWidget {
   }
 }
 
-// Extension to capitalize strings
+// ================== VoiceRecorder Widget ======================
+typedef VoiceRecordCallback =
+    Future<void> Function(String filePath, double duration);
+
+class VoiceRecorder extends StatefulWidget {
+  final VoiceRecordCallback onStop;
+  const VoiceRecorder({required this.onStop, Key? key}) : super(key: key);
+
+  @override
+  State<VoiceRecorder> createState() => _VoiceRecorderState();
+}
+
+class _VoiceRecorderState extends State<VoiceRecorder> {
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  bool _isRecording = false;
+  DateTime? _startTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _recorder.openRecorder();
+  }
+
+  @override
+  void dispose() {
+    _recorder.closeRecorder();
+    super.dispose();
+  }
+
+  Future<String> _localFilePath() async {
+    final directory = await getTemporaryDirectory();
+    return '${directory.path}/voice_${DateTime.now().millisecondsSinceEpoch}.aac';
+  }
+
+  Future<void> _start() async {
+    final path = await _localFilePath();
+    await _recorder.startRecorder(toFile: path, codec: Codec.aacADTS);
+    setState(() {
+      _isRecording = true;
+      _startTime = DateTime.now();
+    });
+  }
+
+  Future<void> _stop() async {
+    final path = await _recorder.stopRecorder();
+    setState(() {
+      _isRecording = false;
+    });
+    if (path != null && _startTime != null) {
+      final durationSec =
+          DateTime.now().difference(_startTime!).inMilliseconds / 1000.0;
+      await widget.onStop(path, durationSec);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(
+        _isRecording ? Icons.stop : Icons.mic,
+        color: _isRecording ? Colors.red : null,
+      ),
+      onPressed: _isRecording ? _stop : _start,
+      tooltip: _isRecording ? 'Stop Recording' : 'Record Voice',
+    );
+  }
+}
+
+// =================== String capitalize extension ==============
 extension StringExtension on String {
   String capitalize() {
-    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }
